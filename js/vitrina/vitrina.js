@@ -27,6 +27,7 @@ const state = {
     historicoPage: 1
 };
 let detailMapInstance = null;
+let detailVideoOverlay = null;
 const HISTORICO_PAGE_SIZE = 10;
 const VITRINA_FETCH_ATTEMPTS = 3;
 const VITRINA_503_MAX_RETRIES = 5;
@@ -831,6 +832,7 @@ function openPropertyDetail(propOrId) {
         .then(d => {
             elModalBody.innerHTML = buildDetailHTML(d);
             initGallery();
+            initDetailVideoSection();
             initModalDetailFooter(d, listProp);
             initDetailMapSection();
         })
@@ -926,6 +928,152 @@ function buildPriceBlock(d) {
         <div class="modal-price">${raw}</div>
         <small>Pesos Colombianos</small>
       </div>`;
+}
+
+function isValidHttpUrl(value) {
+    if (!value) return false;
+    try {
+        const parsed = new URL(String(value).trim());
+        return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+        return false;
+    }
+}
+
+function getYouTubeEmbedUrl(value) {
+    if (!isValidHttpUrl(value)) return '';
+    try {
+        const parsed = new URL(String(value).trim());
+        const host = parsed.hostname.replace(/^www\./, '').toLowerCase();
+
+        if (host === 'youtube.com' || host === 'm.youtube.com') {
+            if (parsed.pathname.startsWith('/shorts/')) {
+                const id = parsed.pathname.split('/').filter(Boolean)[1];
+                return id ? `https://www.youtube.com/embed/${id}` : '';
+            }
+            if (parsed.pathname === '/watch') {
+                const id = parsed.searchParams.get('v');
+                return id ? `https://www.youtube.com/embed/${id}` : '';
+            }
+            if (parsed.pathname.startsWith('/embed/')) {
+                const id = parsed.pathname.split('/').filter(Boolean)[1];
+                return id ? `https://www.youtube.com/embed/${id}` : '';
+            }
+        }
+
+        if (host === 'youtu.be') {
+            const id = parsed.pathname.split('/').filter(Boolean)[0];
+            return id ? `https://www.youtube.com/embed/${id}` : '';
+        }
+    } catch {
+        return '';
+    }
+    return '';
+}
+
+function buildVideoSectionHTML(detail) {
+    const rawUrl = String(detail?.video || '').trim();
+    if (!rawUrl) {
+        return `
+        <section class="detail-video-section">
+          <h3 class="detail-section-title">Video del inmueble</h3>
+          <p class="video-status">Video no disponible.</p>
+        </section>`;
+    }
+
+    if (!isValidHttpUrl(rawUrl)) {
+        return `
+        <section class="detail-video-section">
+          <h3 class="detail-section-title">Video del inmueble</h3>
+          <p class="video-status">Video no disponible.</p>
+        </section>`;
+    }
+
+    const embedUrl = getYouTubeEmbedUrl(rawUrl);
+    const actionLabel = embedUrl ? 'Ver video' : 'Abrir enlace de video';
+
+    return `
+    <section class="detail-video-section">
+      <h3 class="detail-section-title">Video del inmueble</h3>
+      <button
+        type="button"
+        class="video-card-btn"
+        data-video-url="${rawUrl}"
+        data-video-embed-url="${embedUrl}"
+        aria-label="${actionLabel}">
+        <span class="video-card-icon">▶</span>
+        <span class="video-card-content">
+          <strong>${actionLabel}</strong>
+          <small>${embedUrl ? 'Se abrirá en vista previa' : 'Se abrirá en una nueva pestaña'}</small>
+        </span>
+      </button>
+    </section>`;
+}
+
+function createDetailVideoOverlay() {
+    if (detailVideoOverlay) return detailVideoOverlay;
+    const overlay = document.createElement('div');
+    overlay.className = 'video-overlay';
+    overlay.id = 'detail-video-overlay';
+    overlay.innerHTML = `
+      <div class="video-overlay-dialog" role="dialog" aria-modal="true" aria-label="Video del inmueble">
+        <button type="button" class="video-overlay-close" aria-label="Cerrar video">✕</button>
+        <div class="video-overlay-frame-wrap">
+          <iframe
+            id="detail-video-frame"
+            class="video-overlay-frame"
+            src=""
+            title="Video del inmueble"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen>
+          </iframe>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeDetailVideoOverlay();
+    });
+    overlay.querySelector('.video-overlay-close')?.addEventListener('click', closeDetailVideoOverlay);
+
+    detailVideoOverlay = overlay;
+    return overlay;
+}
+
+function openDetailVideoOverlay(embedUrl) {
+    if (!embedUrl) return;
+    const overlay = createDetailVideoOverlay();
+    const frame = overlay.querySelector('#detail-video-frame');
+    if (!frame) return;
+    frame.src = embedUrl;
+    overlay.classList.add('active');
+}
+
+function closeDetailVideoOverlay() {
+    if (!detailVideoOverlay) return;
+    detailVideoOverlay.classList.remove('active');
+    const frame = detailVideoOverlay.querySelector('#detail-video-frame');
+    if (frame) frame.src = '';
+}
+
+function initDetailVideoSection() {
+    const btn = document.querySelector('.video-card-btn');
+    if (!btn) return;
+
+    btn.addEventListener('click', () => {
+        const embedUrl = String(btn.dataset.videoEmbedUrl || '').trim();
+        const directUrl = String(btn.dataset.videoUrl || '').trim();
+
+        if (embedUrl) {
+            openDetailVideoOverlay(embedUrl);
+            return;
+        }
+
+        if (isValidHttpUrl(directUrl)) {
+            window.open(directUrl, '_blank', 'noopener,noreferrer');
+        }
+    });
 }
 
 function parseCoordinate(value) {
@@ -1235,6 +1383,7 @@ function buildDetailHTML(d) {
             <button class="gallery-arrow gallery-next" aria-label="Siguiente">&#8250;</button>
           </div>
           <div class="gallery-thumbs">${thumbs}</div>
+          ${buildVideoSectionHTML(d)}
         </div>
 
         <!-- RIGHT: Title + Price + Specs -->
@@ -1475,6 +1624,7 @@ function closeLightbox() {
 // Modal Close
 // ============================================================
 function closeModal() {
+    closeDetailVideoOverlay();
     destroyDetailMap();
     elModal.classList.add('hidden');
     elModal.setAttribute('aria-hidden', 'true');
@@ -1492,6 +1642,10 @@ document.addEventListener('keydown', e => {
         if (e.key === 'Escape') { closeLightbox(); e.stopPropagation(); return; }
         if (e.key === 'ArrowLeft')  { lightboxNav(-1); return; }
         if (e.key === 'ArrowRight') { lightboxNav(1); return; }
+        return;
+    }
+    if (e.key === 'Escape' && detailVideoOverlay?.classList.contains('active')) {
+        closeDetailVideoOverlay();
         return;
     }
     if (e.key === 'Escape' && !elModal.classList.contains('hidden')) closeModal();

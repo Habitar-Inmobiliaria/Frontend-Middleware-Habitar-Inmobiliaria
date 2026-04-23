@@ -1296,6 +1296,125 @@ body::before {
     box-sizing: border-box;
 }
 
+.detail-video-section {
+    padding: 14px 10px 4px;
+    background: #fff;
+}
+
+.detail-video-section .detail-section-title {
+    margin-bottom: 10px;
+    font-size: 0.95rem;
+}
+
+.video-card-btn {
+    width: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: #F9FAFB;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.2s, background-color 0.2s, transform 0.2s;
+}
+
+.video-card-btn:hover {
+    border-color: #2563EB;
+    background: #EFF6FF;
+    transform: translateY(-1px);
+}
+
+.video-card-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #DC2626;
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.video-card-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    color: var(--text-primary);
+}
+
+.video-card-content strong {
+    font-size: 0.88rem;
+}
+
+.video-card-content small {
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+}
+
+.video-status {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.video-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    background: rgba(0, 0, 0, 0.72);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.video-overlay.active {
+    display: flex;
+}
+
+.video-overlay-dialog {
+    position: relative;
+    width: min(900px, 82vw);
+    max-height: 78vh;
+    background: #000;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+
+.video-overlay-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.video-overlay-frame-wrap {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    max-height: 78vh;
+}
+
+.video-overlay-frame {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+}
+
 /* Title inside specs column */
 .modal-specs-col .modal-title {
     font-size: 1.2rem;
@@ -1563,6 +1682,14 @@ body::before {
     .modal-specs-col {
         max-height: none;
         overflow-y: visible;
+    }
+
+    .detail-video-section {
+        padding: 12px 8px 2px;
+    }
+
+    .video-overlay-dialog {
+        width: min(94vw, 900px);
     }
 
     .char-grid {
