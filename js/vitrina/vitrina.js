@@ -839,7 +839,7 @@ function openPropertyDetail(propOrId) {
 
     api.getPropertyDetail(state.token, propertyId, { cancelPrevious: true })
         .then(d => {
-            elModalBody.innerHTML = buildDetailHTML(d);
+            elModalBody.innerHTML = buildDetailHTML(d, listProp);
             initGallery();
             initDetailVideoSection();
             initModalDetailFooter(d, listProp);
@@ -1325,7 +1325,7 @@ function preloadGalleryImages(images) {
     });
 }
 
-function buildDetailHTML(d) {
+function buildDetailHTML(d, listProp = null) {
     const imgs = (d.galeriasImagenes && d.galeriasImagenes.length)
         ? d.galeriasImagenes
         : ['https://via.placeholder.com/800x500?text=Sin+imagen'];
@@ -1338,6 +1338,9 @@ function buildDetailHTML(d) {
         extractPropertyIdFromUrl(d.url || d.urlReferencia || d.urlInmueble || '')
         || d.codigoNumerico
         || d.id
+        || extractPropertyIdFromUrl(listProp?.url || listProp?.urlReferencia || listProp?.urlInmueble || '')
+        || listProp?.codigoNumerico
+        || listProp?.id
         || ''
     ).trim();
 
