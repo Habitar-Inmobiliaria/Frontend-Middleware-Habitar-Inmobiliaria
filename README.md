@@ -15,7 +15,7 @@ Permite visualizar inmuebles, cambiar su estado (me interesa / descartado), ver 
 - Modal de detalle de inmueble con galería.
 - Caché en memoria para detalle de inmuebles.
 - Carga diferida del histórico para no sobrecargar la carga inicial.
-- Estética responsive (desktop y mobile).
+- Estética responsive (desktop y mobile)
 
 ## Tecnologías
 
