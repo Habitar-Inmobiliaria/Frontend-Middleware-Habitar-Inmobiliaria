@@ -1334,7 +1334,15 @@ function buildDetailHTML(d) {
         `<img src="${src}" class="gallery-thumb${i === 0 ? ' active' : ''}" data-index="${i}" alt="Foto ${i+1}">`
     ).join('');
 
+    const detailPropertyId = String(
+        extractPropertyIdFromUrl(d.url || d.urlReferencia || d.urlInmueble || '')
+        || d.codigoNumerico
+        || d.id
+        || ''
+    ).trim();
+
     const specRows = [
+        ['ID inmueble',          detailPropertyId],
         ['Tipo de negocio',      d.tipoNegocio],
         ['Tipo de inmueble',     d.tipoInmueble],
         ['Ubicación',            d.ubicacion],
