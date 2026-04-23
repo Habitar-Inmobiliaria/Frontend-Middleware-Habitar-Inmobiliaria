@@ -26,6 +26,7 @@ const state = {
     historicoData: [],
     historicoPage: 1
 };
+let detailMapInstance = null;
 const HISTORICO_PAGE_SIZE = 10;
 const VITRINA_FETCH_ATTEMPTS = 3;
 const VITRINA_503_MAX_RETRIES = 5;
@@ -831,6 +832,7 @@ function openPropertyDetail(propOrId) {
             elModalBody.innerHTML = buildDetailHTML(d);
             initGallery();
             initModalDetailFooter(d, listProp);
+            initDetailMapSection();
         })
         .catch(() => {
             elModalBody.innerHTML = '<p class="modal-error">Error cargando el detalle del inmueble.</p>';
@@ -924,6 +926,117 @@ function buildPriceBlock(d) {
         <div class="modal-price">${raw}</div>
         <small>Pesos Colombianos</small>
       </div>`;
+}
+
+function parseCoordinate(value) {
+    if (value === null || value === undefined || value === '') return null;
+    const parsed = parseFloat(String(value).trim());
+    return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getGeoMeta(detail) {
+    const publishMode = Number(detail?.id_publish_on_map);
+    const latitude = parseCoordinate(detail?.latitude);
+    const longitude = parseCoordinate(detail?.longitude);
+    const hasCoordinates = latitude !== null && longitude !== null;
+    return { publishMode, latitude, longitude, hasCoordinates };
+}
+
+function buildMapSectionHTML(detail) {
+    const geo = getGeoMeta(detail);
+    const isSupportedMode = geo.publishMode === 1 || geo.publishMode === 2 || geo.publishMode === 3;
+
+    if (!isSupportedMode) {
+        return `
+        <section class="detail-section detail-map-section">
+          <h3 class="detail-section-title">Visualizar en Maps</h3>
+          <p class="map-status">Ubicación no disponible.</p>
+        </section>`;
+    }
+
+    if (geo.publishMode === 1) {
+        return `
+        <section class="detail-section detail-map-section">
+          <h3 class="detail-section-title">Visualizar en Maps</h3>
+          <p class="map-status map-status-muted">Ubicación no disponible por configuración de privacidad.</p>
+        </section>`;
+    }
+
+    if (!geo.hasCoordinates) {
+        return `
+        <section class="detail-section detail-map-section">
+          <h3 class="detail-section-title">Visualizar en Maps</h3>
+          <p class="map-status">Ubicación no disponible.</p>
+        </section>`;
+    }
+
+    const locationHint = geo.publishMode === 2
+        ? 'Ubicación aproximada'
+        : 'Ubicación exacta';
+
+    return `
+    <section class="detail-section detail-map-section">
+      <h3 class="detail-section-title">Visualizar en Maps</h3>
+      <p class="map-status">${locationHint}</p>
+      <div
+        id="detail-property-map"
+        class="property-map"
+        data-lat="${geo.latitude}"
+        data-lng="${geo.longitude}"
+        data-publish-mode="${geo.publishMode}">
+      </div>
+    </section>`;
+}
+
+function destroyDetailMap() {
+    if (!detailMapInstance) return;
+    detailMapInstance.remove();
+    detailMapInstance = null;
+}
+
+function initDetailMapSection() {
+    destroyDetailMap();
+
+    const mapEl = document.getElementById('detail-property-map');
+    if (!mapEl) return;
+
+    if (!window.L) {
+        mapEl.outerHTML = '<p class="map-status">No fue posible cargar el mapa.</p>';
+        return;
+    }
+
+    const lat = parseFloat(mapEl.dataset.lat || '');
+    const lng = parseFloat(mapEl.dataset.lng || '');
+    const publishMode = Number(mapEl.dataset.publishMode || 3);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || (publishMode !== 2 && publishMode !== 3)) {
+        mapEl.outerHTML = '<p class="map-status">Ubicación no disponible.</p>';
+        return;
+    }
+
+    detailMapInstance = window.L.map(mapEl, {
+        scrollWheelZoom: false,
+        zoomControl: true
+    }).setView([lat, lng], publishMode === 2 ? 14 : 16);
+
+    window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(detailMapInstance);
+
+    if (publishMode === 2) {
+        const area = window.L.circle([lat, lng], {
+            radius: 500,
+            color: '#2563EB',
+            fillColor: '#60A5FA',
+            fillOpacity: 0.22
+        }).addTo(detailMapInstance);
+        detailMapInstance.fitBounds(area.getBounds(), { padding: [18, 18] });
+    } else {
+        window.L.marker([lat, lng]).addTo(detailMapInstance);
+    }
+
+    setTimeout(() => detailMapInstance?.invalidateSize(), 0);
 }
 
 /**
@@ -1148,6 +1261,8 @@ function buildDetailHTML(d) {
           <h3 class="detail-section-title">Características externas</h3>
           <div class="char-grid">${checkList(d.caracteristicasExternas)}</div>
         </section>` : ''}
+
+        ${buildMapSectionHTML(d)}
       </div>
 
       <footer class="modal-detail-footer hidden" id="modal-detail-footer" aria-label="Acciones sobre el inmueble"></footer>
@@ -1360,6 +1475,7 @@ function closeLightbox() {
 // Modal Close
 // ============================================================
 function closeModal() {
+    destroyDetailMap();
     elModal.classList.add('hidden');
     elModal.setAttribute('aria-hidden', 'true');
     document.body.style.overflow = '';   // restore background scroll

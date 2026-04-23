@@ -1471,6 +1471,29 @@ body::before {
     border-bottom: 2px solid #DBEAFE;
 }
 
+.detail-map-section {
+    margin-bottom: 8px;
+}
+
+.property-map {
+    width: 100%;
+    height: 320px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    background: #F9FAFB;
+}
+
+.map-status {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin: 0 0 10px;
+}
+
+.map-status-muted {
+    color: #9CA3AF;
+}
+
 /* ---- Spec grid ---- */
 .spec-grid {
     display: grid;
@@ -1544,6 +1567,10 @@ body::before {
 
     .char-grid {
         grid-template-columns: repeat(2, 1fr);
+    }
+
+    .property-map {
+        height: 260px;
     }
 }
 
