@@ -973,21 +973,9 @@ function getYouTubeEmbedUrl(value) {
 
 function buildVideoSectionHTML(detail) {
     const rawUrl = String(detail?.video || '').trim();
-    if (!rawUrl) {
-        return `
-        <section class="detail-video-section">
-          <h3 class="detail-section-title">Video del inmueble</h3>
-          <p class="video-status">Video no disponible.</p>
-        </section>`;
-    }
+    if (!rawUrl) return '';
 
-    if (!isValidHttpUrl(rawUrl)) {
-        return `
-        <section class="detail-video-section">
-          <h3 class="detail-section-title">Video del inmueble</h3>
-          <p class="video-status">Video no disponible.</p>
-        </section>`;
-    }
+    if (!isValidHttpUrl(rawUrl)) return '';
 
     const embedUrl = getYouTubeEmbedUrl(rawUrl);
     const actionLabel = embedUrl ? 'Ver video' : 'Abrir enlace de video';
