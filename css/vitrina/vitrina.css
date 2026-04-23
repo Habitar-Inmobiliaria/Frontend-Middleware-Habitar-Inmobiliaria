@@ -263,6 +263,20 @@ body::before {
     flex-direction: column;
 }
 
+.property-id-tab {
+    align-self: flex-start;
+    margin: 10px 0 0 12px;
+    padding: 4px 12px;
+    border: 2px solid #111;
+    border-radius: 999px;
+    background: #fff;
+    color: #111;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+}
+
 .property-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 12px 24px -4px rgba(0,0,0,0.12), 0 4px 8px -2px rgba(0,0,0,0.08);

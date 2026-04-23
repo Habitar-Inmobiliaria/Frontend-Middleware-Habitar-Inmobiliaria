@@ -582,6 +582,15 @@ function renderCurrentTab() {
         } else {
             priceBadge.textContent = rawPrice;
         }
+
+        const propertyIdFromUrl = extractPropertyIdFromUrl(prop.url || prop.urlReferencia || prop.urlInmueble || '');
+        const displayPropertyId = String(propertyIdFromUrl || prop.codigoNumerico || prop.id || '').trim();
+        const idTab = card.querySelector('.property-id-tab');
+        if (idTab && displayPropertyId) {
+            idTab.textContent = `ID: ${displayPropertyId}`;
+            idTab.classList.remove('hidden');
+        }
+
         card.querySelector('.property-title').textContent = prop.titulo || '';
         card.querySelector('.property-location').innerHTML = `📍 ${prop.ubicacion || ''}`;
         card.querySelector('.property-description').textContent = prop.descripcionCorta || '';
