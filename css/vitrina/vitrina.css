@@ -264,14 +264,14 @@ body::before {
 }
 
 .property-id-tab {
-    align-self: flex-start;
-    margin: 10px 0 0 12px;
-    padding: 4px 12px;
+    align-self: flex-end;
+    margin: 10px 12px 0 0;
+    padding: 4px 10px;
     border: 2px solid #111;
     border-radius: 999px;
     background: #fff;
     color: #111;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.02em;
     line-height: 1.2;
@@ -296,13 +296,13 @@ body::before {
 
 .price-badge {
     position: absolute;
-    top: 12px;
-    left: 12px;
+    top: 10px;
+    left: 10px;
     background: rgba(255, 255, 255, 0.95);
-    padding: 6px 12px;
+    padding: 5px 10px;
     border-radius: var(--radius-full);
     font-weight: 700;
-    font-size: 0.9rem;
+    font-size: 0.82rem;
     color: var(--text-primary);
     box-shadow: var(--shadow-sm);
     backdrop-filter: blur(4px);
