@@ -1701,6 +1701,16 @@ elTabBtns.forEach(btn => {
 // Init
 // ============================================================
 async function init() {
+    // Normaliza URLs tipo /vitrina/{token}/ -> /vitrina/{token}
+    // para evitar problemas de enrutamiento en algunos hosts.
+    const trailingSlashMatch = window.location.pathname.match(/^\/vitrina\/([^/]+)\/+$/);
+    if (trailingSlashMatch) {
+        const normalizedPath = `/vitrina/${trailingSlashMatch[1]}`;
+        const normalizedUrl = `${window.location.origin}${normalizedPath}${window.location.search}${window.location.hash}`;
+        window.location.replace(normalizedUrl);
+        return;
+    }
+
     function decodeToken(raw) {
         const input = String(raw || '').trim();
         if (!input) return '';
