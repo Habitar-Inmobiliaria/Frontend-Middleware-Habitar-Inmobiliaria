@@ -1734,8 +1734,11 @@ async function init() {
     const params = new URLSearchParams(window.location.search);
     const rawParam = params.get('t') || params.get('token') || '';
 
-    const pathTokenDecoded = sanitizeToken(decodeToken(pathTokenRaw));
-    const queryTokenDecoded = sanitizeToken(decodeToken(rawParam));
+    const cleanPathTokenRaw = sanitizeToken(pathTokenRaw);
+    const cleanQueryTokenRaw = sanitizeToken(rawParam);
+
+    const pathTokenDecoded = sanitizeToken(decodeToken(cleanPathTokenRaw));
+    const queryTokenDecoded = sanitizeToken(decodeToken(cleanQueryTokenRaw));
     state.token = pathTokenDecoded || queryTokenDecoded || DEFAULT_TOKEN;
 
     console.log(`Vitrina token: ${state.token}`);
