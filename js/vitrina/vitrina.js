@@ -1716,6 +1716,16 @@ async function init() {
         }
     }
 
+    function sanitizeToken(raw) {
+        const input = String(raw || '').trim();
+        if (!input) return '';
+        return input
+            .replace(/%5C/gi, '')
+            .replace(/\\/g, '')
+            .replace(/^_+|_+$/g, '')
+            .trim();
+    }
+
     // 1. Intentar leer desde el path: /vitrina/{token}
     const pathMatch = window.location.pathname.match(/\/vitrina\/([^/]+)/);
     const pathTokenRaw = pathMatch ? decodeURIComponent(pathMatch[1]) : '';
@@ -1724,8 +1734,8 @@ async function init() {
     const params = new URLSearchParams(window.location.search);
     const rawParam = params.get('t') || params.get('token') || '';
 
-    const pathTokenDecoded = decodeToken(pathTokenRaw);
-    const queryTokenDecoded = decodeToken(rawParam);
+    const pathTokenDecoded = sanitizeToken(decodeToken(pathTokenRaw));
+    const queryTokenDecoded = sanitizeToken(decodeToken(rawParam));
     state.token = pathTokenDecoded || queryTokenDecoded || DEFAULT_TOKEN;
 
     console.log(`Vitrina token: ${state.token}`);
