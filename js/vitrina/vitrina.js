@@ -82,6 +82,22 @@ function getHistoryPropertyId(item) {
     return String(fromUrl || '').trim();
 }
 
+function normalizeDisplayText(value) {
+    const text = String(value ?? '').trim();
+    if (!text) return '';
+    if (/^(null|undefined|nan)$/i.test(text)) return '';
+    if (/^null\s*-\s*null$/i.test(text)) return '';
+    return text;
+}
+
+function isUnavailablePropertyView(prop, normalized = {}) {
+    const title = normalizeDisplayText(normalized.title ?? prop?.titulo);
+    const location = normalizeDisplayText(normalized.location ?? prop?.ubicacion);
+    const description = normalizeDisplayText(normalized.description ?? prop?.descripcionCorta);
+    const image = normalizeDisplayText(prop?.imagenUrl);
+    return !title && !location && !description && !image;
+}
+
 // ============================================================
 // API Service
 // ============================================================
@@ -567,12 +583,22 @@ function renderCurrentTab() {
     filtered.forEach(prop => {
         const clone = elTemplate.content.cloneNode(true);
         const card  = clone.querySelector('.property-card');
+        const imageWrapper = card.querySelector('.property-image-wrapper');
+        const detailsEl = card.querySelector('.property-details');
+        const titleEl = card.querySelector('.property-title');
+        const locationEl = card.querySelector('.property-location');
+        const descriptionEl = card.querySelector('.property-description');
 
         card.dataset.id = prop.id;
         const imgEl = card.querySelector('.property-image');
         imgEl.src     = prop.imagenUrl || '';
         imgEl.alt     = prop.titulo || 'Propiedad';
         imgEl.loading = 'lazy';
+        imgEl.onerror = () => {
+            if (card.classList.contains('property-card-unavailable')) return;
+            imageWrapper.classList.add('property-image-wrapper-unavailable');
+            imageWrapper.innerHTML = '<div class="property-unavailable-media">Vista previa no disponible</div>';
+        };
 
         const priceBadge = card.querySelector('.price-badge');
         const rawPrice = prop.precioFormateado || '';
@@ -591,15 +617,49 @@ function renderCurrentTab() {
             idTab.classList.remove('hidden');
         }
 
-        card.querySelector('.property-title').textContent = prop.titulo || '';
-        card.querySelector('.property-location').innerHTML = `📍 ${prop.ubicacion || ''}`;
-        card.querySelector('.property-description').textContent = prop.descripcionCorta || '';
+        const cleanTitle = normalizeDisplayText(prop.titulo);
+        const cleanLocation = normalizeDisplayText(prop.ubicacion);
+        const cleanDescription = normalizeDisplayText(prop.descripcionCorta);
+        const unavailableView = isUnavailablePropertyView(prop, {
+            title: cleanTitle,
+            location: cleanLocation,
+            description: cleanDescription
+        });
+
+        if (unavailableView) {
+            card.classList.add('property-card-unavailable');
+            titleEl.textContent = 'Inmueble no disponible';
+            locationEl.classList.add('hidden');
+            descriptionEl.classList.add('hidden');
+            priceBadge.style.display = 'none';
+            imageWrapper.classList.add('property-image-wrapper-unavailable');
+            imageWrapper.innerHTML = '<div class="property-unavailable-media">Previsualización de inmueble</div>';
+
+            const ribbon = document.createElement('div');
+            ribbon.className = 'property-unavailable-ribbon';
+            ribbon.textContent = `El inmueble con id ${displayPropertyId || 'N/D'} ya no se encuentra disponible`;
+            detailsEl.prepend(ribbon);
+        } else {
+            titleEl.textContent = cleanTitle;
+            if (cleanLocation) {
+                locationEl.textContent = `📍 ${cleanLocation}`;
+                locationEl.classList.remove('hidden');
+            } else {
+                locationEl.classList.add('hidden');
+            }
+            if (cleanDescription) {
+                descriptionEl.textContent = cleanDescription;
+                descriptionEl.classList.remove('hidden');
+            } else {
+                descriptionEl.classList.add('hidden');
+            }
+        }
 
         const openDetail = () => openPropertyDetail(prop);
-        card.querySelector('.property-image-wrapper').addEventListener('click', openDetail);
-        card.querySelector('.property-image-wrapper').style.cursor = 'pointer';
-        card.querySelector('.property-title').addEventListener('click', openDetail);
-        card.querySelector('.property-title').style.cursor = 'pointer';
+        imageWrapper.addEventListener('click', openDetail);
+        imageWrapper.style.cursor = 'pointer';
+        titleEl.addEventListener('click', openDetail);
+        titleEl.style.cursor = 'pointer';
 
         if (tab === 'historico' && prop._historyMeta) {
             const metaDiv = card.querySelector('.property-history-meta');
@@ -616,7 +676,12 @@ function renderCurrentTab() {
         }
 
         const actionBar = card.querySelector('.action-bar');
-        buildActionButtons(actionBar, prop, card, tab);
+        if (unavailableView) {
+            actionBar.classList.add('hidden');
+            actionBar.innerHTML = '';
+        } else {
+            buildActionButtons(actionBar, prop, card, tab);
+        }
 
         fragment.appendChild(card);
     });

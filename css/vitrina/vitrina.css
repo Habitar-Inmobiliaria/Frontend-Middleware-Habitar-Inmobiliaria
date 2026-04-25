@@ -284,6 +284,37 @@ body::before {
     box-shadow: 0 12px 24px -4px rgba(0,0,0,0.12), 0 4px 8px -2px rgba(0,0,0,0.08);
 }
 
+.property-card-unavailable {
+    border: 1px solid #E5E7EB;
+}
+
+.property-image-wrapper-unavailable {
+    background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.property-unavailable-media {
+    color: #6B7280;
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: center;
+    padding: 12px;
+}
+
+.property-unavailable-ribbon {
+    background: #FEF3C7;
+    border: 1px solid #F59E0B;
+    color: #92400E;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    line-height: 1.4;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+}
+
 .property-image-wrapper {
     position: relative;
     height: 200px;
