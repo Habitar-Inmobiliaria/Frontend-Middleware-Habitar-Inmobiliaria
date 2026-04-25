@@ -679,14 +679,17 @@ function renderCurrentTab() {
             imageWrapper.innerHTML = '<div class="property-unavailable-media">Vista previa no disponible</div>';
         };
 
+        const openDetail = () => {
+            if (card.classList.contains('property-card-unavailable')) return;
+            openPropertyDetail(prop);
+        };
+
         if (!unavailableView) {
-            const openDetail = () => openPropertyDetail(prop);
             imageWrapper.addEventListener('click', openDetail);
             imageWrapper.style.cursor = 'pointer';
             titleEl.addEventListener('click', openDetail);
             titleEl.style.cursor = 'pointer';
         } else {
-            card.style.pointerEvents = 'none';
             imageWrapper.style.cursor = 'default';
             titleEl.style.cursor = 'default';
         }
