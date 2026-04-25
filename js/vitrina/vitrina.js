@@ -686,6 +686,7 @@ function renderCurrentTab() {
             titleEl.addEventListener('click', openDetail);
             titleEl.style.cursor = 'pointer';
         } else {
+            card.style.pointerEvents = 'none';
             imageWrapper.style.cursor = 'default';
             titleEl.style.cursor = 'default';
         }

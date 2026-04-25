@@ -288,6 +288,10 @@ body::before {
     border: 1px solid #E5E7EB;
 }
 
+.property-card-unavailable .property-title {
+    text-align: center;
+}
+
 .property-image-wrapper-unavailable {
     background: linear-gradient(135deg, #F9FAFB 0%, #F3F4F6 100%);
     display: flex;
