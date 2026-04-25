@@ -590,17 +590,16 @@ function renderCurrentTab() {
         const titleEl = card.querySelector('.property-title');
         const locationEl = card.querySelector('.property-location');
         const descriptionEl = card.querySelector('.property-description');
+        const actionBar = card.querySelector('.action-bar');
+        const cleanTitle = normalizeDisplayText(prop.titulo);
+        const cleanLocation = normalizeDisplayText(prop.ubicacion);
+        const cleanDescription = normalizeDisplayText(prop.descripcionCorta);
 
         card.dataset.id = prop.id;
         const imgEl = card.querySelector('.property-image');
         imgEl.src     = prop.imagenUrl || '';
         imgEl.alt     = prop.titulo || 'Propiedad';
         imgEl.loading = 'lazy';
-        imgEl.onerror = () => {
-            if (card.classList.contains('property-card-unavailable')) return;
-            imageWrapper.classList.add('property-image-wrapper-unavailable');
-            imageWrapper.innerHTML = '<div class="property-unavailable-media">Vista previa no disponible</div>';
-        };
 
         const priceBadge = card.querySelector('.price-badge');
         const rawPrice = prop.precioFormateado || '';
@@ -619,16 +618,7 @@ function renderCurrentTab() {
             idTab.classList.remove('hidden');
         }
 
-        const cleanTitle = normalizeDisplayText(prop.titulo);
-        const cleanLocation = normalizeDisplayText(prop.ubicacion);
-        const cleanDescription = normalizeDisplayText(prop.descripcionCorta);
-        const unavailableView = isUnavailablePropertyView(prop, {
-            title: cleanTitle,
-            location: cleanLocation,
-            description: cleanDescription
-        });
-
-        if (unavailableView) {
+        const applyUnavailableCardState = () => {
             card.classList.add('property-card-unavailable');
             titleEl.textContent = 'Inmueble no disponible';
             locationEl.classList.add('hidden');
@@ -636,11 +626,26 @@ function renderCurrentTab() {
             priceBadge.style.display = 'none';
             imageWrapper.classList.add('property-image-wrapper-unavailable');
             imageWrapper.innerHTML = '<div class="property-unavailable-media">Previsualización de inmueble</div>';
+            actionBar.classList.add('hidden');
+            actionBar.innerHTML = '';
 
-            const ribbon = document.createElement('div');
-            ribbon.className = 'property-unavailable-ribbon';
-            ribbon.textContent = `El inmueble con id ${displayPropertyId || 'N/D'} ya no se encuentra disponible`;
-            detailsEl.prepend(ribbon);
+            const existingRibbon = detailsEl.querySelector('.property-unavailable-ribbon');
+            if (!existingRibbon) {
+                const ribbon = document.createElement('div');
+                ribbon.className = 'property-unavailable-ribbon';
+                ribbon.textContent = `El inmueble con id ${displayPropertyId || 'N/D'} ya no se encuentra disponible`;
+                detailsEl.prepend(ribbon);
+            }
+        };
+
+        let unavailableView = isUnavailablePropertyView(prop, {
+            title: cleanTitle,
+            location: cleanLocation,
+            description: cleanDescription
+        });
+
+        if (unavailableView) {
+            applyUnavailableCardState();
         } else {
             titleEl.textContent = cleanTitle;
             if (cleanLocation) {
@@ -657,11 +662,33 @@ function renderCurrentTab() {
             }
         }
 
-        const openDetail = () => openPropertyDetail(prop);
-        imageWrapper.addEventListener('click', openDetail);
-        imageWrapper.style.cursor = 'pointer';
-        titleEl.addEventListener('click', openDetail);
-        titleEl.style.cursor = 'pointer';
+        imgEl.onerror = () => {
+            if (card.classList.contains('property-card-unavailable')) return;
+
+            // Si la imagen falla y no hay contenido útil, tratar como no disponible.
+            const shouldBecomeUnavailable = !cleanLocation && !cleanDescription;
+            if (shouldBecomeUnavailable) {
+                unavailableView = true;
+                applyUnavailableCardState();
+                imageWrapper.style.cursor = 'default';
+                titleEl.style.cursor = 'default';
+                return;
+            }
+
+            imageWrapper.classList.add('property-image-wrapper-unavailable');
+            imageWrapper.innerHTML = '<div class="property-unavailable-media">Vista previa no disponible</div>';
+        };
+
+        if (!unavailableView) {
+            const openDetail = () => openPropertyDetail(prop);
+            imageWrapper.addEventListener('click', openDetail);
+            imageWrapper.style.cursor = 'pointer';
+            titleEl.addEventListener('click', openDetail);
+            titleEl.style.cursor = 'pointer';
+        } else {
+            imageWrapper.style.cursor = 'default';
+            titleEl.style.cursor = 'default';
+        }
 
         if (tab === 'historico' && prop._historyMeta) {
             const metaDiv = card.querySelector('.property-history-meta');
@@ -677,7 +704,6 @@ function renderCurrentTab() {
             dateSpan.textContent = formatHistoryDate(prop._historyMeta.fechaCreacion);
         }
 
-        const actionBar = card.querySelector('.action-bar');
         if (unavailableView) {
             actionBar.classList.add('hidden');
             actionBar.innerHTML = '';
