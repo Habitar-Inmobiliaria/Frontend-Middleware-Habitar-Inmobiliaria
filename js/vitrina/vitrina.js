@@ -87,15 +87,17 @@ function normalizeDisplayText(value) {
     if (!text) return '';
     if (/^(null|undefined|nan)$/i.test(text)) return '';
     if (/^null\s*-\s*null$/i.test(text)) return '';
+    if (/^sin descripci[oó]n disponible\.?$/i.test(text)) return '';
+    if (/^inmueble sin informaci[oó]n completa\.?$/i.test(text)) return '';
     return text;
 }
 
 function isUnavailablePropertyView(prop, normalized = {}) {
-    const title = normalizeDisplayText(normalized.title ?? prop?.titulo);
     const location = normalizeDisplayText(normalized.location ?? prop?.ubicacion);
     const description = normalizeDisplayText(normalized.description ?? prop?.descripcionCorta);
     const image = normalizeDisplayText(prop?.imagenUrl);
-    return !title && !location && !description && !image;
+    // Caso operativo: sin imagen + sin ubicación + sin descripción útil.
+    return !image && !location && !description;
 }
 
 // ============================================================
