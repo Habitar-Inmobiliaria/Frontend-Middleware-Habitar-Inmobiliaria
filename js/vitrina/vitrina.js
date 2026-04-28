@@ -616,7 +616,7 @@ function renderImportantInfoPanel() {
     if (!infoState.comments.length) {
         elImportantInfoContent.innerHTML = `
             <div class="important-info-status">
-                <p>No hay comentarios disponibles para este contacto.</p>
+                <p>Por ahora no hay novedades en esta sección.</p>
             </div>
         `;
         return;
