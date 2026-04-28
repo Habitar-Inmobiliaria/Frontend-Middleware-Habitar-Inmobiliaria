@@ -563,6 +563,21 @@ function formatCommentDate(iso) {
     }
 }
 
+function scrollToPropertyCardByCode(propertyCode) {
+    const code = String(propertyCode || '').trim();
+    if (!code) return;
+
+    const card = elPropertyList.querySelector(`.property-card[data-property-code="${code}"]`);
+    if (!card) {
+        showToast(`No se encontró el inmueble ${code} en esta lista.`);
+        return;
+    }
+
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('property-card-highlight');
+    setTimeout(() => card.classList.remove('property-card-highlight'), 1400);
+}
+
 function renderImportantInfoPanel() {
     if (!elImportantInfoPanel || !elImportantInfoContent || !elImportantInfoToggle) return;
 
@@ -615,11 +630,6 @@ function renderImportantInfoPanel() {
         const row = document.createElement('article');
         row.className = 'important-info-comment-item';
 
-        const avatar = document.createElement('img');
-        avatar.className = 'important-info-avatar';
-        avatar.alt = `Foto de ${state.agent?.nombreCompleto || 'asesor'}`;
-        avatar.src = state.agent?.fotoUrl || 'https://via.placeholder.com/80';
-
         const bubble = document.createElement('div');
         bubble.className = 'important-info-bubble';
 
@@ -631,11 +641,23 @@ function renderImportantInfoPanel() {
         meta.className = 'important-info-comment-meta';
         const commentId = String(item?.id || '').trim();
         const dateText = formatCommentDate(item?.creadoEn);
-        meta.textContent = `${commentId ? `ID inmueble: ${commentId}` : 'ID inmueble: N/D'}${dateText ? ` · ${dateText}` : ''}`;
+
+        const inmuebleLink = document.createElement('button');
+        inmuebleLink.type = 'button';
+        inmuebleLink.className = 'important-info-comment-link';
+        inmuebleLink.textContent = `Inmueble: ${commentId || 'N/D'}`;
+        inmuebleLink.disabled = !commentId;
+        inmuebleLink.addEventListener('click', () => scrollToPropertyCardByCode(commentId));
+
+        meta.appendChild(inmuebleLink);
+        if (dateText) {
+            const dateNode = document.createElement('span');
+            dateNode.textContent = ` · ${dateText}`;
+            meta.appendChild(dateNode);
+        }
 
         bubble.appendChild(text);
         bubble.appendChild(meta);
-        row.appendChild(avatar);
         row.appendChild(bubble);
         list.appendChild(row);
     });
@@ -766,6 +788,7 @@ function renderCurrentTab() {
 
         const propertyIdFromUrl = extractPropertyIdFromUrl(prop.url || prop.urlReferencia || prop.urlInmueble || '');
         const displayPropertyId = String(propertyIdFromUrl || prop.codigoNumerico || prop.id || '').trim();
+        card.dataset.propertyCode = displayPropertyId;
         const idTab = card.querySelector('.property-id-tab');
         if (idTab && displayPropertyId) {
             idTab.textContent = `ID: ${displayPropertyId}`;

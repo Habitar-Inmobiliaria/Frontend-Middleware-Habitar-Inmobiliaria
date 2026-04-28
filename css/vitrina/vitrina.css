@@ -330,18 +330,7 @@ body::before {
 }
 
 .important-info-comment-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-}
-
-.important-info-avatar {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 1px solid var(--border-color);
-    flex-shrink: 0;
+    display: block;
 }
 
 .important-info-bubble {
@@ -363,6 +352,29 @@ body::before {
     color: var(--text-secondary);
     font-size: 0.76rem;
     font-weight: 600;
+}
+
+.important-info-comment-link {
+    border: none;
+    background: transparent;
+    color: #1D4ED8;
+    font-family: var(--font-family);
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.important-info-comment-link:disabled {
+    color: var(--text-secondary);
+    cursor: default;
+    text-decoration: none;
+}
+
+.property-card-highlight {
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35), var(--shadow-card);
 }
 
 /* Property Card Design */
