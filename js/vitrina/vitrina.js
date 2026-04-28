@@ -24,7 +24,14 @@ const state = {
     activeTab:  'sin-revisar',
     historicoFetched: false,
     historicoData: [],
-    historicoPage: 1
+    historicoPage: 1,
+    importantInfo: {
+        open: false,
+        loading: false,
+        loaded: false,
+        comments: [],
+        error: ''
+    }
 };
 let detailMapInstance = null;
 let detailVideoOverlay = null;
@@ -187,6 +194,18 @@ const api = {
         const res = await fetch(url, { headers: TUNNEL_HEADERS });
         if (!res.ok) await handleApiError(res);
         return res.json();
+    },
+
+    async getComentarios(token) {
+        const url = `${API_BASE}/${token}/comentarios`;
+        const res = await fetch(url, { headers: TUNNEL_HEADERS });
+        if (!res.ok) await handleApiError(res);
+        const data = await res.json();
+        return {
+            contactId: String(data?.contactId || token || '').trim(),
+            total: Number(data?.total) || 0,
+            comentarios: Array.isArray(data?.comentarios) ? data.comentarios : []
+        };
     },
 
     async getPropertyDetail(token, wasiId, options = {}) {
@@ -464,6 +483,11 @@ const elHistoricoPrev = document.getElementById('historico-prev');
 const elHistoricoNext = document.getElementById('historico-next');
 const elHistoricoPageInfo = document.getElementById('historico-page-info');
 const elHistoricoLoading = document.getElementById('historico-loading');
+const elImportantInfoSection = document.getElementById('important-info-section');
+const elImportantInfoToggle = document.getElementById('important-info-toggle');
+const elImportantInfoChevron = elImportantInfoToggle?.querySelector('.important-info-chevron');
+const elImportantInfoPanel = document.getElementById('important-info-panel');
+const elImportantInfoContent = document.getElementById('important-info-content');
 
 // ============================================================
 // Helpers: Phone Parsing
@@ -524,6 +548,134 @@ function renderAgent(agent) {
     `;
 }
 
+function formatCommentDate(iso) {
+    if (!iso) return '';
+    try {
+        return new Date(iso).toLocaleString('es-CO', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } catch {
+        return String(iso);
+    }
+}
+
+function renderImportantInfoPanel() {
+    if (!elImportantInfoPanel || !elImportantInfoContent || !elImportantInfoToggle) return;
+
+    const infoState = state.importantInfo;
+    elImportantInfoPanel.classList.toggle('hidden', !infoState.open);
+    elImportantInfoToggle.setAttribute('aria-expanded', infoState.open ? 'true' : 'false');
+    if (elImportantInfoChevron) elImportantInfoChevron.textContent = infoState.open ? '▴' : '▾';
+    if (!infoState.open) return;
+
+    if (infoState.loading) {
+        elImportantInfoContent.innerHTML = `
+            <div class="important-info-status">
+                <div class="spinner"></div>
+                <p>Cargando información importante...</p>
+            </div>
+        `;
+        return;
+    }
+
+    if (infoState.error) {
+        elImportantInfoContent.innerHTML = `
+            <div class="important-info-status">
+                <p>${infoState.error}</p>
+                <button type="button" class="important-info-retry-btn">Reintentar</button>
+            </div>
+        `;
+        const retryBtn = elImportantInfoContent.querySelector('.important-info-retry-btn');
+        retryBtn?.addEventListener('click', () => {
+            state.importantInfo.loaded = false;
+            state.importantInfo.error = '';
+            fetchImportantInfoComments();
+        });
+        return;
+    }
+
+    if (!infoState.comments.length) {
+        elImportantInfoContent.innerHTML = `
+            <div class="important-info-status">
+                <p>No hay comentarios disponibles para este contacto.</p>
+            </div>
+        `;
+        return;
+    }
+
+    elImportantInfoContent.innerHTML = '';
+    const list = document.createElement('div');
+    list.className = 'important-info-comments-list';
+
+    infoState.comments.forEach((item) => {
+        const row = document.createElement('article');
+        row.className = 'important-info-comment-item';
+
+        const avatar = document.createElement('img');
+        avatar.className = 'important-info-avatar';
+        avatar.alt = `Foto de ${state.agent?.nombreCompleto || 'asesor'}`;
+        avatar.src = state.agent?.fotoUrl || 'https://via.placeholder.com/80';
+
+        const bubble = document.createElement('div');
+        bubble.className = 'important-info-bubble';
+
+        const text = document.createElement('p');
+        text.className = 'important-info-comment-text';
+        text.textContent = normalizeDisplayText(item?.comentario) || 'Comentario sin contenido';
+
+        const meta = document.createElement('div');
+        meta.className = 'important-info-comment-meta';
+        const commentId = String(item?.id || '').trim();
+        const dateText = formatCommentDate(item?.creadoEn);
+        meta.textContent = `${commentId ? `ID inmueble: ${commentId}` : 'ID inmueble: N/D'}${dateText ? ` · ${dateText}` : ''}`;
+
+        bubble.appendChild(text);
+        bubble.appendChild(meta);
+        row.appendChild(avatar);
+        row.appendChild(bubble);
+        list.appendChild(row);
+    });
+
+    elImportantInfoContent.appendChild(list);
+}
+
+function renderImportantInfoVisibility() {
+    if (!elImportantInfoSection) return;
+    const show = state.activeTab === 'aprobadas';
+    elImportantInfoSection.classList.toggle('hidden', !show);
+    if (!show && elImportantInfoPanel && elImportantInfoToggle) {
+        elImportantInfoPanel.classList.add('hidden');
+        elImportantInfoToggle.setAttribute('aria-expanded', 'false');
+        if (elImportantInfoChevron) elImportantInfoChevron.textContent = '▾';
+    } else {
+        renderImportantInfoPanel();
+    }
+}
+
+async function fetchImportantInfoComments() {
+    if (state.importantInfo.loading) return;
+    state.importantInfo.loading = true;
+    state.importantInfo.error = '';
+    renderImportantInfoPanel();
+
+    try {
+        const data = await api.getComentarios(state.token);
+        const comments = Array.isArray(data.comentarios) ? data.comentarios : [];
+        state.importantInfo.comments = comments;
+        state.importantInfo.loaded = true;
+    } catch (err) {
+        console.error('Error loading comentarios:', err);
+        state.importantInfo.error = 'No fue posible cargar la información importante.';
+    } finally {
+        state.importantInfo.loading = false;
+        renderImportantInfoPanel();
+    }
+}
+
 
 // ============================================================
 // UI: Tab Badges
@@ -574,6 +726,8 @@ function renderCurrentTab() {
             elHistoricoNext.disabled = state.historicoPage === totalPages;
         }
     }
+
+    renderImportantInfoVisibility();
 
     if (filtered.length === 0) {
         showEmptyState(tab);
@@ -1772,6 +1926,18 @@ elHistoricoNext.addEventListener('click', () => {
     renderCurrentTab();
     window.scrollTo({ top: 0, behavior: 'smooth' });
 });
+
+if (elImportantInfoToggle) {
+    elImportantInfoToggle.addEventListener('click', async () => {
+        if (state.activeTab !== 'aprobadas') return;
+        state.importantInfo.open = !state.importantInfo.open;
+        renderImportantInfoPanel();
+
+        if (state.importantInfo.open && !state.importantInfo.loaded && !state.importantInfo.loading) {
+            await fetchImportantInfoComments();
+        }
+    });
+}
 
 // ============================================================
 // Tabs
