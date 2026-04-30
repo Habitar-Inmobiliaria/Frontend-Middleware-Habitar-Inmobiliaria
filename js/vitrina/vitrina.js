@@ -35,6 +35,8 @@ const state = {
 };
 let detailMapInstance = null;
 let detailVideoOverlay = null;
+const unavailableProbeCache = new Map();
+const unavailableProbeInFlight = new Map();
 const HISTORICO_PAGE_SIZE = 10;
 const VITRINA_FETCH_ATTEMPTS = 3;
 const VITRINA_503_MAX_RETRIES = 5;
@@ -105,6 +107,56 @@ function isUnavailablePropertyView(prop, normalized = {}) {
     const image = normalizeDisplayText(prop?.imagenUrl);
     // Caso operativo: sin imagen + sin ubicación + sin descripción útil.
     return !image && !location && !description;
+}
+
+function normalizeWasiProbePayload(payload) {
+    if (!payload) return null;
+
+    const fromArray = Array.isArray(payload)
+        ? payload[0]
+        : null;
+    if (fromArray && typeof fromArray === 'object') return fromArray;
+
+    if (Array.isArray(payload?.data) && payload.data.length > 0) return payload.data[0];
+    if (Array.isArray(payload?.results) && payload.results.length > 0) return payload.results[0];
+    if (payload?.property && typeof payload.property === 'object') return payload.property;
+    if (payload?.inmueble && typeof payload.inmueble === 'object') return payload.inmueble;
+
+    // Si ya viene objeto plano de inmueble
+    if (typeof payload === 'object' && !Array.isArray(payload)) return payload;
+    return null;
+}
+
+function applyWasiProbeDataToProperty(prop, data) {
+    if (!prop || !data) return;
+    const nextTitle = normalizeDisplayText(data.titulo || data.title || data.nombre);
+    const nextLocation = normalizeDisplayText(data.ubicacion || data.location || data.ciudad);
+    const nextDescription = normalizeDisplayText(data.descripcionCorta || data.observaciones || data.descripcion || data.description);
+    const nextImage = normalizeDisplayText(
+        data.imagenUrl
+        || data.imagen_principal
+        || data.imagen
+        || data.foto
+        || (Array.isArray(data.galeriasImagenes) ? data.galeriasImagenes[0] : '')
+        || (Array.isArray(data.imagenes) ? data.imagenes[0] : '')
+    );
+    const nextPrice = normalizeDisplayText(
+        data.precioFormateado
+        || data.precio_formateado
+        || data.precio
+    );
+    const nextUrl = normalizeDisplayText(
+        data.urlReferencia
+        || data.url
+        || data.link
+    );
+
+    if (nextTitle) prop.titulo = nextTitle;
+    if (nextLocation) prop.ubicacion = nextLocation;
+    if (nextDescription) prop.descripcionCorta = nextDescription;
+    if (nextImage) prop.imagenUrl = nextImage;
+    if (nextPrice) prop.precioFormateado = nextPrice;
+    if (nextUrl) prop.urlReferencia = nextUrl;
 }
 
 // ============================================================
@@ -194,6 +246,39 @@ const api = {
         const res = await fetch(url, { headers: TUNNEL_HEADERS });
         if (!res.ok) await handleApiError(res);
         return res.json();
+    },
+
+    async getWasiPropertyByReferencia(referencia) {
+        const ref = String(referencia || '').trim();
+        if (!ref) return null;
+
+        const cacheKey = `wasi-ref-${ref}`;
+        if (unavailableProbeCache.has(cacheKey)) {
+            return unavailableProbeCache.get(cacheKey);
+        }
+        if (unavailableProbeInFlight.has(cacheKey)) {
+            return unavailableProbeInFlight.get(cacheKey);
+        }
+
+        const url = `https://api.wasi.co/v1/property/search?id_company=4175603&wasi_token=jzgY_bsS4_fR9F_G1t1&scope=3&referencia=${encodeURIComponent(ref)}`;
+        const probePromise = (async () => {
+            try {
+                const res = await fetch(url);
+                if (!res.ok) return null;
+                const raw = await res.json();
+                const normalized = normalizeWasiProbePayload(raw);
+                unavailableProbeCache.set(cacheKey, normalized || null);
+                return normalized || null;
+            } catch {
+                unavailableProbeCache.set(cacheKey, null);
+                return null;
+            } finally {
+                unavailableProbeInFlight.delete(cacheKey);
+            }
+        })();
+
+        unavailableProbeInFlight.set(cacheKey, probePromise);
+        return probePromise;
     },
 
     async getComentarios(token) {
@@ -823,6 +908,23 @@ function renderCurrentTab() {
 
         if (unavailableView) {
             applyUnavailableCardState();
+
+            // Regla especial: solo para cards no disponibles, verificar en Wasi por referencia.
+            if (displayPropertyId) {
+                api.getWasiPropertyByReferencia(displayPropertyId).then((probeData) => {
+                    if (!probeData) return;
+                    applyWasiProbeDataToProperty(prop, probeData);
+
+                    const stillUnavailable = isUnavailablePropertyView(prop, {
+                        title: normalizeDisplayText(prop.titulo),
+                        location: normalizeDisplayText(prop.ubicacion),
+                        description: normalizeDisplayText(prop.descripcionCorta)
+                    });
+                    if (!stillUnavailable) {
+                        renderCurrentTab();
+                    }
+                });
+            }
         } else {
             titleEl.textContent = cleanTitle;
             if (cleanLocation) {
