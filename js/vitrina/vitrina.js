@@ -162,34 +162,71 @@ function applyWasiProbeDataToProperty(prop, data) {
     if (nextUrl) prop.urlReferencia = nextUrl;
 }
 
-async function tryRecoverUnavailableProperty(prop, displayPropertyId) {
+function setUnavailableVerifyingIndicator(card, show) {
+    if (!card) return;
+    const details = card.querySelector('.property-details');
+    if (!details) return;
+    const existing = details.querySelector('.property-unavailable-verifying');
+    if (!show) {
+        existing?.remove();
+        return;
+    }
+    if (existing) return;
+
+    const el = document.createElement('div');
+    el.className = 'property-unavailable-verifying';
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+
+    const spin = document.createElement('span');
+    spin.className = 'verifying-mini-spinner';
+    spin.setAttribute('aria-hidden', 'true');
+
+    const text = document.createElement('span');
+    text.className = 'verifying-mini-text';
+    text.textContent = 'Verificando disponibilidad…';
+
+    el.appendChild(spin);
+    el.appendChild(text);
+
+    const ribbon = details.querySelector('.property-unavailable-ribbon');
+    if (ribbon) ribbon.after(el);
+    else details.prepend(el);
+}
+
+async function tryRecoverUnavailableProperty(prop, displayPropertyId, cardEl) {
     const ref = String(displayPropertyId || '').trim();
     if (!ref || !prop) return;
 
-    const refreshIfNeeded = () => {
-        const stillUnavailable = isUnavailablePropertyView(prop, {
-            title: normalizeDisplayText(prop.titulo),
-            location: normalizeDisplayText(prop.ubicacion),
-            description: normalizeDisplayText(prop.descripcionCorta)
-        });
-        if (!stillUnavailable) renderCurrentTab();
-    };
+    setUnavailableVerifyingIndicator(cardEl, true);
+    try {
+        const refreshIfNeeded = () => {
+            const stillUnavailable = isUnavailablePropertyView(prop, {
+                title: normalizeDisplayText(prop.titulo),
+                location: normalizeDisplayText(prop.ubicacion),
+                description: normalizeDisplayText(prop.descripcionCorta)
+            });
+            if (!stillUnavailable) renderCurrentTab();
+        };
 
-    const probeData = await api.getWasiPropertyByReferencia(ref);
-    if (probeData) {
-        applyWasiProbeDataToProperty(prop, probeData);
+        const probeData = await api.getWasiPropertyByReferencia(ref);
+        if (probeData) {
+            applyWasiProbeDataToProperty(prop, probeData);
+            refreshIfNeeded();
+            if (!isUnavailablePropertyView(prop, {
+                title: normalizeDisplayText(prop.titulo),
+                location: normalizeDisplayText(prop.ubicacion),
+                description: normalizeDisplayText(prop.descripcionCorta)
+            })) return;
+        }
+
+        const scrapeData = await api.scrapeInmuebleByReferencia(ref);
+        if (!scrapeData) return;
+        applyWasiProbeDataToProperty(prop, scrapeData);
         refreshIfNeeded();
-        if (!isUnavailablePropertyView(prop, {
-            title: normalizeDisplayText(prop.titulo),
-            location: normalizeDisplayText(prop.ubicacion),
-            description: normalizeDisplayText(prop.descripcionCorta)
-        })) return;
+    } finally {
+        if (cardEl?.isConnected) setUnavailableVerifyingIndicator(cardEl, false);
     }
-
-    const scrapeData = await api.scrapeInmuebleByReferencia(ref);
-    if (!scrapeData) return;
-    applyWasiProbeDataToProperty(prop, scrapeData);
-    refreshIfNeeded();
 }
 
 // ============================================================
@@ -982,7 +1019,7 @@ function renderCurrentTab() {
             applyUnavailableCardState();
 
             // Regla especial: Wasi por referencia; si falla o sigue vacío → webhook n8n scrape.
-            if (displayPropertyId) tryRecoverUnavailableProperty(prop, displayPropertyId);
+            if (displayPropertyId) void tryRecoverUnavailableProperty(prop, displayPropertyId, card);
         } else {
             titleEl.textContent = cleanTitle;
             if (cleanLocation) {
@@ -1009,7 +1046,7 @@ function renderCurrentTab() {
                 applyUnavailableCardState();
                 imageWrapper.style.cursor = 'default';
                 titleEl.style.cursor = 'default';
-                if (displayPropertyId) tryRecoverUnavailableProperty(prop, displayPropertyId);
+                if (displayPropertyId) void tryRecoverUnavailableProperty(prop, displayPropertyId, card);
                 return;
             }
 

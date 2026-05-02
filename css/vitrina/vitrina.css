@@ -448,6 +448,37 @@ body::before {
     margin-bottom: 12px;
 }
 
+.property-unavailable-verifying {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #EFF6FF;
+    border: 1px solid #BFDBFE;
+    color: #1E40AF;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.35;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+}
+
+.verifying-mini-spinner {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    border: 2px solid #BFDBFE;
+    border-top-color: #1D4ED8;
+    border-radius: 50%;
+    margin: 0;
+    animation: spin 0.9s infinite linear;
+}
+
+.verifying-mini-text {
+    flex: 1;
+    min-width: 0;
+}
+
 .property-image-wrapper {
     position: relative;
     height: 200px;
