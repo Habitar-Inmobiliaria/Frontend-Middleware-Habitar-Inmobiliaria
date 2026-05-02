@@ -1,0 +1,1228 @@
+{
+  "id": "A6YqosJAEYhnlXXB",
+  "name": "Registro Mensajes Chatwoot HubSpot",
+  "active": true,
+  "isArchived": false,
+  "versionId": "59fa0be3-da69-4ae5-9584-06fcdab137b4",
+  "activeVersionId": "59fa0be3-da69-4ae5-9584-06fcdab137b4",
+  "triggerCount": 1,
+  "createdAt": "2026-04-28T20:13:58.828Z",
+  "updatedAt": "2026-05-01T23:46:26.336Z",
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extraer Datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Datos": {
+      "main": [
+        [
+          {
+            "node": "Sanitizar entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sanitizar entrada": {
+      "main": [
+        [
+          {
+            "node": "Preparar Busqueda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Busqueda": {
+      "main": [
+        [
+          {
+            "node": "¿Puede Buscar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Puede Buscar?": {
+      "main": [
+        [
+          {
+            "node": "Buscar Contacto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Asignar Owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Contacto": {
+      "main": [
+        [
+          {
+            "node": "Evaluar Busqueda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluar Busqueda": {
+      "main": [
+        [
+          {
+            "node": "Asignar Owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Asignar Owner": {
+      "main": [
+        [
+          {
+            "node": "Traer Owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Traer Owner": {
+      "main": [
+        [
+          {
+            "node": "Preparar Upsert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Upsert": {
+      "main": [
+        [
+          {
+            "node": "¿Existe Contacto?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Existe Contacto?": {
+      "main": [
+        [
+          {
+            "node": "Extraer Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Crear Contacto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Metadata": {
+      "main": [
+        [
+          {
+            "node": "¿Misma Conversación?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Misma Conversación?": {
+      "main": [
+        [
+          {
+            "node": "Traer Comunicacion Actual",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Crear Comunicacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Traer Comunicacion Actual": {
+      "main": [
+        [
+          {
+            "node": "Preparar Actualizacion HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear Comunicacion": {
+      "main": [
+        [
+          {
+            "node": "Vincular Contacto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vincular Contacto": {
+      "main": [
+        [
+          {
+            "node": "Guardar IDs Contacto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear Contacto": {
+      "main": [
+        [
+          {
+            "node": "Mapear Nuevo Contacto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapear Nuevo Contacto": {
+      "main": [
+        [
+          {
+            "node": "Extraer Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Actualizacion HTML": {
+      "main": [
+        [
+          {
+            "node": "Actualizar Comunicacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "/chatwoot/message-recive",
+        "options": {}
+      },
+      "id": "87562c24-b0d7-44f3-8ba6-bbe5848cf64c",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1424,
+        512
+      ],
+      "webhookId": "b1e892ca-8eb9-44b3-b773-e761c3685edd"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst webhookData = items[0].json.body;\n\n// Procesar mensajes nuevos Y nuevas conversaciones (el primer mensaje enviado)\n// Permitir updates para capturar adjuntos o cambios de estado\\nif (!['message_created', 'message_updated', 'conversation_created', 'conversation_updated'].includes(webhookData.event)) {\n    return []; \n}\n\n// Encontrar al CONTACTO real (no al agente que responde)\nlet contacto = webhookData.conversation?.meta?.sender || webhookData.meta?.sender;\nif (!contacto || (!contacto.name && !contacto.phone_number)) {\n    if (webhookData.sender && webhookData.sender.type !== 'user' && webhookData.sender.type !== 'agent') {\n        contacto = webhookData.sender;\n    } else {\n        contacto = {};\n    }\n}\n\nlet assignee = webhookData.conversation?.meta?.assignee || webhookData.meta?.assignee || webhookData.assignee || {};\n\nlet fullName = contacto.name || '';\nlet parts = fullName.split(\" \");\nlet nombres = parts[0] || '';\nlet apellidos = parts.slice(1).join(\" \") || '';\n\nlet telefono = contacto.phone_number || '';\nlet email = contacto.email || '';\nlet owner = assignee.name || '';\n\nreturn [{\n  json: {\n    ...items[0].json,\n    Nombres: nombres,\n    Apellidos: apellidos,\n    Telefono: telefono,\n    Email: email,\n    owner: owner\n  }\n}];\n"
+      },
+      "id": "5b7fac75-9cc5-4ee0-95a6-2e5629eeb647",
+      "name": "Extraer Datos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1184,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "\nconst item = $input.item.json;\nconst rawName = String(item.Nombres ?? '').trim();\nconst emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/i;\nconst pareceCorreo = emailRegex.test(rawName) || (rawName.includes('@') && /\\./.test(rawName));\n\nlet baseName = pareceCorreo ? rawName.split('@')[0] : rawName;\nbaseName = baseName.replace(/[._-]+/g, ' ');\n\nconst sinRuido = baseName\n  .replace(/[^A-Za-z\\u00C0-\\u024F0-9\\s.'-]/gu, ' ')\n  .replace(/\\s+/gu, ' ')\n  .trim();\n\nlet capitalizado = sinRuido\n  .split(' ')\n  .filter(Boolean)\n  .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())\n  .join(' ');\n\nconst soloLetras = (capitalizado.match(/[A-Za-z\\u00C0-\\u024F]/g) || []).length;\nif (soloLetras < 2) { capitalizado = 'Contacto Chatwoot Por Actualizar'; }\n\nconst phone = String(item.Telefono ?? '').trim();\nconst email = String(item.Email ?? '').trim();\n\nreturn {\n  json: {\n    ...item,\n    Nombres: capitalizado,\n    Nombres_crudo: rawName,\n    nombre_extraido_desde_correo: pareceCorreo,\n    Telefono: phone,\n    Email: email\n  },\n};\n      "
+      },
+      "id": "c98377db-9a1c-430b-8f31-ca4418e94fcb",
+      "name": "Sanitizar entrada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -976,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "\nconst item = $input.item.json;\nconst filterGroups = [];\n\nif (item.Email && item.Email.length > 0) {\n  filterGroups.push({\n    filters: [{ propertyName: \"email\", operator: \"EQ\", value: item.Email }]\n  });\n}\n\nif (item.Telefono && item.Telefono.length > 0) {\n  filterGroups.push({\n    filters: [{ propertyName: \"phone\", operator: \"EQ\", value: item.Telefono }]\n  });\n  filterGroups.push({\n    filters: [{ propertyName: \"mobilephone\", operator: \"EQ\", value: item.Telefono }]\n  });\n}\n\nconst tieneApellidos = (item.Apellidos || '').trim().length > 0;\nconst esNombreGenerico = item.Nombres === 'Contacto Chatwoot Por Actualizar';\nif (tieneApellidos && !esNombreGenerico) {\n  filterGroups.push({\n    filters: [\n      { propertyName: \"firstname\", operator: \"CONTAINS_TOKEN\", value: item.Nombres },\n      { propertyName: \"lastname\", operator: \"CONTAINS_TOKEN\", value: item.Apellidos }\n    ]\n  });\n}\n\nreturn {\n  json: {\n    ...item,\n    hubspot_search_body: {\n      filterGroups: filterGroups,\n      properties: [\"firstname\", \"lastname\", \"phone\", \"mobilephone\", \"email\", \"hs_object_id\", \"hubspot_communication_id\", \"chatwoot_conversation_id\"],\n      limit: 1\n    },\n    puede_buscar: filterGroups.length > 0\n  }\n};\n      "
+      },
+      "id": "3a318f2a-41d8-4580-b737-75a5e0a08abe",
+      "name": "Preparar Busqueda",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -768,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond1",
+              "leftValue": "={{ $json.puede_buscar }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4f28445f-0627-49fb-8f1e-c297fb451e7b",
+      "name": "¿Puede Buscar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -576,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/contacts/search",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.hubspot_search_body }}",
+        "options": {}
+      },
+      "id": "481af0e7-f677-430d-be4c-1e4f16e1780d",
+      "name": "Buscar Contacto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -416,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "\nconst searchResult = $input.item.json;\nconst chatwootData = $('Preparar Busqueda').item.json;\n\nconst results = searchResult.results || [];\nconst encontrado = results.length > 0 && !!results[0].id;\nconst contactoId = encontrado ? String(results[0].id) : null;\nconst contactProps = encontrado ? results[0].properties : {};\n\nreturn {\n  json: {\n    ...chatwootData,\n    encontrado: encontrado,\n    hubspot_contacto_id: contactoId,\n    hubspot_search_result: { properties: contactProps }\n  }\n};\n      "
+      },
+      "id": "619596e0-8ad7-491d-a5ac-69fada9c81e1",
+      "name": "Evaluar Busqueda",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "\nconst agentesHabitar = {\n  \"andrea rodriguez\": \"arodriguez@habitarinmobiliaria.co\",\n  \"diana velasquez\": \"dvelasquez@habitarinmobiliaria.co\",\n  \"juan david celis\": \"jcelis@habitarinmobiliaria.co\",\n  \"maria alejandra uribe\": \"muribe@habitarinmobiliaria.co\",\n  \"sebastian cardona\": \"scardona@habitarinmobiliaria.co\",\n  \"stiven suarez\": \"ssuarez@habitarinmobiliaria.co\"\n};\n\nconst item = $input.item.json;\nconst encontrado = item.encontrado || false;\nconst hubspot_contacto_id = item.hubspot_contacto_id || null;\n\nlet ownerName = item.owner || '';\nlet matchedEmail = null;\n\nif (ownerName && ownerName.trim() !== '') {\n  matchedEmail = agentesHabitar[ownerName.trim().toLowerCase()];\n}\n\nif (!matchedEmail) {\n  const correos = Object.values(agentesHabitar);\n  matchedEmail = correos[Math.floor(Math.random() * correos.length)];\n}\n\nreturn { json: { ...item, owner_email: matchedEmail, encontrado, hubspot_contacto_id } };\n      "
+      },
+      "id": "b7417504-1139-4d16-afa6-e706a4205707",
+      "name": "Asignar Owner",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -32,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.hubapi.com/crm/v3/owners?email={{ $json.owner_email }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "options": {}
+      },
+      "id": "86d422c9-3aa6-4ed6-a410-432b66371500",
+      "name": "Traer Owner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        160,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "\nconst ownerResponse = $input.item.json;\nconst chatwootData = $('Asignar Owner').item.json;\nconst ownerId = (ownerResponse.results && ownerResponse.results.length > 0) ? String(ownerResponse.results[0].id) : null;\n\nconst properties = {\n  firstname: chatwootData.Nombres,\n  lastname: chatwootData.Apellidos,\n};\nif (chatwootData.Telefono) properties.phone = chatwootData.Telefono;\nif (chatwootData.Email) properties.email = chatwootData.Email;\nif (ownerId) properties.hubspot_owner_id = ownerId;\nproperties.lifecyclestage = \"marketingqualifiedlead\";\n\nreturn {\n  json: {\n    ...chatwootData,\n    hubspot_owner_id: ownerId,\n    upsert_properties: properties\n  }\n};\n      "
+      },
+      "id": "7a66c1b8-60e0-44e0-a7fe-6a8d82c96632",
+      "name": "Preparar Upsert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        352,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond2",
+              "leftValue": "={{ $json.encontrado }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a8fe35a7-eee2-45d9-8137-00501a270d92",
+      "name": "¿Existe Contacto?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        544,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "\nconst item = $input.item.json;\nconst webhookData = $('Webhook').first().json.body;\n\nlet chatwoot_conversation_id = webhookData.conversation ? String(webhookData.conversation.id) : String(webhookData.id || '');\n\nlet content = webhookData.content;\nif (!content && webhookData.messages && webhookData.messages.length > 0) {\n    content = webhookData.messages[0].content;\n}\ncontent = content || '';\n\nlet attachments = webhookData.attachments;\nif (!attachments && webhookData.messages && webhookData.messages.length > 0) {\n    attachments = webhookData.messages[0].attachments;\n}\nattachments = attachments || [];\n\nlet timestamp_raw = webhookData.created_at;\nif (!timestamp_raw && webhookData.messages && webhookData.messages.length > 0) {\n    timestamp_raw = webhookData.messages[0].created_at;\n}\nlet hs_timestamp;\nif (typeof timestamp_raw === 'string' && timestamp_raw.includes('T')) {\n    hs_timestamp = new Date(timestamp_raw).toISOString();\n} else if (timestamp_raw) {\n    let is_seconds = String(timestamp_raw).length <= 10;\n    let timestamp_ms = is_seconds ? Number(timestamp_raw) * 1000 : Number(timestamp_raw);\n    hs_timestamp = new Date(timestamp_ms).toISOString();\n} else {\n    hs_timestamp = new Date().toISOString();\n}\n\n// Buscar el nombre del emisor correctamente, incluso si está oculto en \"messages[0]\"\nlet sender_name = webhookData.sender?.name;\nif (!sender_name && webhookData.messages && webhookData.messages.length > 0) {\n    sender_name = webhookData.messages[0].sender?.name;\n}\nsender_name = sender_name || webhookData.meta?.sender?.name || webhookData.conversation?.meta?.sender?.name || 'Usuario';\n\n\n// Determinar si es incoming o outgoing\nlet is_incoming = true;\nlet msg_type = webhookData.message_type;\nif (msg_type === undefined && webhookData.messages && webhookData.messages.length > 0) {\n    msg_type = webhookData.messages[0].message_type;\n}\nif (msg_type === 'outgoing' || msg_type === 1 || msg_type === 'template') {\n    is_incoming = false;\n}\n\n// Formatear el contenido\nlet formattedContent = '';\nif (content !== null && content !== undefined && content !== '') {\n    formattedContent = String(content).replace(/\\n/g, '<br>');\n}\n\n// Generar HTML para adjuntos si existen\nlet attachmentHtml = '';\nif (attachments.length > 0) {\n    attachments.forEach(att => {\n        let fileType = att.file_type || 'file'; // 'image', 'audio', 'video', 'file'\n        let url = att.data_url || '';\n        \n        if (fileType === 'image' && url) {\n            // Mostrar imagen directamente\n            attachmentHtml += '<div style=\"margin-top: 5px;\"><a href=\"' + url + '\" target=\"_blank\"><img src=\"' + url + '\" style=\"max-width: 100%; border-radius: 8px; max-height: 250px;\" alt=\"Imagen adjunta\"></a></div>';\n        } else if (fileType === 'audio' && url) {\n            // Enlace descriptivo para audio\n            attachmentHtml += '<div style=\"margin-top: 5px; padding: 6px; background-color: rgba(0,0,0,0.05); border-radius: 4px; font-size: 12px;\">🎵 <b>Audio:</b> <a href=\"' + url + '\" target=\"_blank\" style=\"color: #0056b3; text-decoration: none;\">Escuchar / Descargar</a></div>';\n        } else if (fileType === 'video' && url) {\n            // Enlace descriptivo para video\n            attachmentHtml += '<div style=\"margin-top: 5px; padding: 6px; background-color: rgba(0,0,0,0.05); border-radius: 4px; font-size: 12px;\">🎬 <b>Video:</b> <a href=\"' + url + '\" target=\"_blank\" style=\"color: #0056b3; text-decoration: none;\">Ver / Descargar</a></div>';\n        } else if (url) {\n            // Enlace genérico para archivos\n            attachmentHtml += '<div style=\"margin-top: 5px; padding: 6px; background-color: rgba(0,0,0,0.05); border-radius: 4px; font-size: 12px;\">📎 <b>Archivo:</b> <a href=\"' + url + '\" target=\"_blank\" style=\"color: #0056b3; text-decoration: none;\">Descargar Archivo</a></div>';\n        } else {\n            // Indicador si no hay URL (raro pero posible)\n            attachmentHtml += '<div style=\"margin-top: 5px; padding: 6px; background-color: rgba(0,0,0,0.05); border-radius: 4px; font-size: 12px; font-style: italic;\">📎 [Archivo adjunto en Chatwoot]</div>';\n        }\n    });\n}\n\n// Combinar texto y adjuntos\nlet contentArea = '';\nif (formattedContent) {\n    contentArea += '<div style=\"font-size: 14px; line-height: 1.4;\">' + formattedContent + '</div>';\n}\nif (attachmentHtml) {\n    contentArea += attachmentHtml;\n}\nif (!contentArea) {\n    contentArea = '<div style=\"font-size: 14px; line-height: 1.4; font-style: italic; color: #888;\">[Multimedia]</div>';\n}\n\n// Hora formateada para la burbuja\nlet timeObj = new Date(hs_timestamp);\nlet timeString = timeObj.getHours().toString().padStart(2, '0') + ':' + timeObj.getMinutes().toString().padStart(2, '0');\n\nlet msg_id = webhookData.id;\nif (!msg_id && webhookData.messages && webhookData.messages.length > 0) {\n    msg_id = webhookData.messages[0].id;\n}\nmsg_id = msg_id || hs_timestamp; // Fallback\n\nlet bubble_wrapper_start = '<div id=\"cw-msg-' + msg_id + '\" data-msg-id=\"' + msg_id + '\">';\nlet bubble_wrapper_end = '</div><!-- end-cw-msg-' + msg_id + ' -->';\n\nlet html_bubble = bubble_wrapper_start;\nif (is_incoming) {\n    // Cliente (Izquierda, Gris)\n    html_bubble += '<div style=\"text-align: left; margin-bottom: 12px; margin-top: 4px;\">' +\n      '<div style=\"display: inline-block; background-color: #f0f2f5; color: #1c1e21; padding: 10px 14px; border-radius: 0px 16px 16px 16px; text-align: left; max-width: 85%; border: 1px solid #e4e6eb; font-family: Helvetica, Arial, sans-serif;\">' +\n        '<div style=\"font-size: 11px; color: #65676b; margin-bottom: 4px;\"><b>' + sender_name + '</b></div>' +\n        contentArea +\n        '<div style=\"font-size: 10px; color: #8a8d91; text-align: right; margin-top: 6px;\">' + timeString + '</div>' +\n      '</div>' +\n    '</div>';\n} else {\n    // Agente (Derecha, Verde)\n    html_bubble += '<div style=\"text-align: right; margin-bottom: 12px; margin-top: 4px;\">' +\n      '<div style=\"display: inline-block; background-color: #dcf8c6; color: #1c1e21; padding: 10px 14px; border-radius: 16px 0px 16px 16px; text-align: left; max-width: 85%; border: 1px solid #c2e0ab; font-family: Helvetica, Arial, sans-serif;\">' +\n        '<div style=\"font-size: 11px; color: #4b663b; margin-bottom: 4px;\"><b>' + sender_name + '</b></div>' +\n        contentArea +\n        '<div style=\"font-size: 10px; color: #698a58; text-align: right; margin-top: 6px;\">' + timeString + '</div>' +\n      '</div>' +\n    '</div>';\n}\n\nhtml_bubble += bubble_wrapper_end;\\n\\nconst saved_chatwoot_id = item.hubspot_search_result?.properties?.chatwoot_conversation_id || '';\nconst saved_communication_id = item.hubspot_search_result?.properties?.hubspot_communication_id || '';\n\nconst es_misma_conversacion = (saved_chatwoot_id === chatwoot_conversation_id) && saved_communication_id !== '';\n\nreturn {\n  json: {\n    ...item,\n    mensaje_actual: {\n      content,\n      sender_name,\n      chatwoot_conversation_id,\n      hs_timestamp,\n      html_bubble\n    },\n    hubspot_data: {\n      es_misma_conversacion,\n      saved_communication_id\n    }\n  }\n};\n      "
+      },
+      "id": "26fdc1cd-8add-41bd-887b-3b756f2d4153",
+      "name": "Extraer Metadata",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        752,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond3",
+              "leftValue": "={{ $json.hubspot_data.es_misma_conversacion }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "427ba9b2-724e-4ba4-bae4-22babd63432d",
+      "name": "¿Misma Conversación?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ \"https://api.hubapi.com/crm/v3/objects/communications/\" + $json.hubspot_data.saved_communication_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "properties",
+              "value": "hs_communication_body"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bbbb413d-d06e-4a25-acc2-71cc19426b0a",
+      "name": "Traer Comunicacion Actual",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1200,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ \"https://api.hubapi.com/crm/v3/objects/communications/\" + $(\"Extraer Metadata\").item.json.hubspot_data.saved_communication_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"properties\": { \"hs_communication_body\": $json.updated_html } } }}",
+        "options": {}
+      },
+      "id": "db963be9-3d2f-403a-9600-3df0832c7999",
+      "name": "Actualizar Comunicacion",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1600,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/communications",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"properties\": { \"hs_communication_channel_type\": \"WHATS_APP\", \"hs_communication_logged_from\": \"CRM\", \"hs_communication_body\": $json.mensaje_actual.html_bubble, \"hubspot_owner_id\": $json.hubspot_owner_id, \"hs_timestamp\": $json.mensaje_actual.hs_timestamp } } }}",
+        "options": {}
+      },
+      "id": "9d46abe8-4fae-4ab4-9d7c-7a8e27dde428",
+      "name": "Crear Comunicacion",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1200,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ \"https://api.hubapi.com/crm/v3/objects/communications/\" + $json.id + \"/associations/contact/\" + $(\"Extraer Metadata\").item.json.hubspot_contacto_id + \"/communication_to_contact\" }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "options": {}
+      },
+      "id": "75345224-2281-4ef8-a8b2-78c41cc74319",
+      "name": "Vincular Contacto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1408,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ \"https://api.hubapi.com/crm/v3/objects/contacts/\" + $(\"Extraer Metadata\").item.json.hubspot_contacto_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"properties\": { \"chatwoot_conversation_id\": $(\"Extraer Metadata\").item.json.mensaje_actual.chatwoot_conversation_id, \"hubspot_communication_id\": $(\"Crear Comunicacion\").item.json.id } } }}",
+        "options": {}
+      },
+      "id": "c52544d7-1fdf-4007-a1cc-8af2372dbe7c",
+      "name": "Guardar IDs Contacto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1600,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const item = $input.item.json;\\nconst existing_html = item.properties?.hs_communication_body || \"\";\\nconst meta = $(\"Extraer Metadata\").item.json.mensaje_actual;\\nconst new_bubble = meta.html_bubble;\\nconst msg_id = meta.msg_id;\\n\\nlet updated_html = existing_html;\\nconst regex = new RegExp('<div id=\"cw-msg-' + msg_id + '\".*?<!-- end-cw-msg-' + msg_id + ' -->', 'gs');\\n\\nif (regex.test(existing_html)) {\\n    updated_html = existing_html.replace(regex, new_bubble);\\n} else {\\n    updated_html = existing_html + new_bubble;\\n}\\n\\nreturn { json: { ...item, updated_html } };"
+      },
+      "id": "e0e2d1d2-1234-4567-89ab-cdef01234567",
+      "name": "Preparar Actualizacion HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/contacts",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"properties\": $(\"Preparar Upsert\").item.json.upsert_properties } }}",
+        "options": {}
+      },
+      "id": "c1d2e3f4-5678-90ab-cdef-1234567890ab",
+      "name": "Crear Contacto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        752,
+        624
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const item = $input.item.json;\\nconst chatwootData = $('Preparar Upsert').item.json;\\n\\nreturn {\\n  json: {\\n    ...chatwootData,\\n    encontrado: true,\\n    hubspot_contacto_id: String(item.id),\\n    hubspot_search_result: { properties: {} }\\n  }\\n};"
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Mapear Nuevo Contacto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        624
+      ]
+    }
+  ],
+  "activeVersion": {
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "/chatwoot/message-recive",
+          "options": {}
+        },
+        "id": "87562c24-b0d7-44f3-8ba6-bbe5848cf64c",
+        "name": "Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          -1424,
+          512
+        ],
+        "webhookId": "b1e892ca-8eb9-44b3-b773-e761c3685edd"
+      },
+      {
+        "parameters": {
+          "jsCode": "const items = $input.all();\nconst webhookData = items[0].json.body;\n\n// Procesar mensajes nuevos Y nuevas conversaciones (el primer mensaje enviado)\nif (webhookData.event !== 'message_created' && webhookData.event !== 'conversation_created') {\n    return []; \n}\n\n// Encontrar al CONTACTO real (no al agente que responde)\nlet contacto = webhookData.conversation?.meta?.sender || webhookData.meta?.sender;\nif (!contacto || (!contacto.name && !contacto.phone_number)) {\n    if (webhookData.sender && webhookData.sender.type !== 'user' && webhookData.sender.type !== 'agent') {\n        contacto = webhookData.sender;\n    } else {\n        contacto = {};\n    }\n}\n\nlet assignee = webhookData.conversation?.meta?.assignee || webhookData.meta?.assignee || webhookData.assignee || {};\n\nlet fullName = contacto.name || '';\nlet parts = fullName.split(\" \");\nlet nombres = parts[0] || '';\nlet apellidos = parts.slice(1).join(\" \") || '';\n\nlet telefono = contacto.phone_number || '';\nlet email = contacto.email || '';\nlet owner = assignee.name || '';\n\nreturn [{\n  json: {\n    ...items[0].json,\n    Nombres: nombres,\n    Apellidos: apellidos,\n    Telefono: telefono,\n    Email: email,\n    owner: owner\n  }\n}];\n"
+        },
+        "id": "5b7fac75-9cc5-4ee0-95a6-2e5629eeb647",
+        "name": "Extraer Datos",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -1184,
+          512
+        ]
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForEachItem",
+          "jsCode": "\nconst item = $input.item.json;\nconst rawName = String(item.Nombres ?? '').trim();\nconst emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/i;\nconst pareceCorreo = emailRegex.test(rawName) || (rawName.includes('@') && /\\./.test(rawName));\n\nlet baseName = pareceCorreo ? rawName.split('@')[0] : rawName;\nbaseName = baseName.replace(/[._-]+/g, ' ');\n\nconst sinRuido = baseName\n  .replace(/[^A-Za-z\\u00C0-\\u024F0-9\\s.'-]/gu, ' ')\n  .replace(/\\s+/gu, ' ')\n  .trim();\n\nlet capitalizado = sinRuido\n  .split(' ')\n  .filter(Boolean)\n  .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())\n  .join(' ');\n\nconst soloLetras = (capitalizado.match(/[A-Za-z\\u00C0-\\u024F]/g) || []).length;\nif (soloLetras < 2) { capitalizado = 'Contacto Chatwoot Por Actualizar'; }\n\nconst phone = String(item.Telefono ?? '').trim();\nconst email = String(item.Email ?? '').trim();\n\nreturn {\n  json: {\n    ...item,\n    Nombres: capitalizado,\n    Nombres_crudo: rawName,\n    nombre_extraido_desde_correo: pareceCorreo,\n    Telefono: phone,\n    Email: email\n  },\n};\n      "
+        },
+        "id": "c98377db-9a1c-430b-8f31-ca4418e94fcb",
+        "name": "Sanitizar entrada",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -976,
+          512
+        ]
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForEachItem",
+          "jsCode": "\nconst item = $input.item.json;\nconst filterGroups = [];\n\nif (item.Email && item.Email.length > 0) {\n  filterGroups.push({\n    filters: [{ propertyName: \"email\", operator: \"EQ\", value: item.Email }]\n  });\n}\n\nif (item.Telefono && item.Telefono.length > 0) {\n  filterGroups.push({\n    filters: [{ propertyName: \"phone\", operator: \"EQ\", value: item.Telefono }]\n  });\n  filterGroups.push({\n    filters: [{ propertyName: \"mobilephone\", operator: \"EQ\", value: item.Telefono }]\n  });\n}\n\nconst tieneApellidos = (item.Apellidos || '').trim().length > 0;\nconst esNombreGenerico = item.Nombres === 'Contacto Chatwoot Por Actualizar';\nif (tieneApellidos && !esNombreGenerico) {\n  filterGroups.push({\n    filters: [\n      { propertyName: \"firstname\", operator: \"CONTAINS_TOKEN\", value: item.Nombres },\n      { propertyName: \"lastname\", operator: \"CONTAINS_TOKEN\", value: item.Apellidos }\n    ]\n  });\n}\n\nreturn {\n  json: {\n    ...item,\n    hubspot_search_body: {\n      filterGroups: filterGroups,\n      properties: [\"firstname\", \"lastname\", \"phone\", \"mobilephone\", \"email\", \"hs_object_id\", \"hubspot_communication_id\", \"chatwoot_conversation_id\"],\n      limit: 1\n    },\n    puede_buscar: filterGroups.length > 0\n  }\n};\n      "
+        },
+        "id": "3a318f2a-41d8-4580-b737-75a5e0a08abe",
+        "name": "Preparar Busqueda",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -768,
+          512
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "cond1",
+                "leftValue": "={{ $json.puede_buscar }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "4f28445f-0627-49fb-8f1e-c297fb451e7b",
+        "name": "¿Puede Buscar?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          -576,
+          512
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.hubapi.com/crm/v3/objects/contacts/search",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "hubspotAppToken",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ $json.hubspot_search_body }}",
+          "options": {}
+        },
+        "id": "481af0e7-f677-430d-be4c-1e4f16e1780d",
+        "name": "Buscar Contacto",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          -416,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForEachItem",
+          "jsCode": "\nconst searchResult = $input.item.json;\nconst chatwootData = $('Preparar Busqueda').item.json;\n\nconst results = searchResult.results || [];\nconst encontrado = results.length > 0 && !!results[0].id;\nconst contactoId = encontrado ? String(results[0].id) : null;\nconst contactProps = encontrado ? results[0].properties : {};\n\nreturn {\n  json: {\n    ...chatwootData,\n    encontrado: encontrado,\n    hubspot_contacto_id: contactoId,\n    hubspot_search_result: { properties: contactProps }\n  }\n};\n      "
+        },
+        "id": "619596e0-8ad7-491d-a5ac-69fada9c81e1",
+        "name": "Evaluar Busqueda",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -240,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForEachItem",
+          "jsCode": "\nconst agentesHabitar = {\n  \"andrea rodriguez\": \"arodriguez@habitarinmobiliaria.co\",\n  \"diana velasquez\": \"dvelasquez@habitarinmobiliaria.co\",\n  \"juan david celis\": \"jcelis@habitarinmobiliaria.co\",\n  \"maria alejandra uribe\": \"muribe@habitarinmobiliaria.co\",\n  \"sebastian cardona\": \"scardona@habitarinmobiliaria.co\",\n  \"stiven suarez\": \"ssuarez@habitarinmobiliaria.co\"\n};\n\nconst item = $input.item.json;\nconst encontrado = item.encontrado || false;\nconst hubspot_contacto_id = item.hubspot_contacto_id || null;\n\nlet ownerName = item.owner || '';\nlet matchedEmail = null;\n\nif (ownerName && ownerName.trim() !== '') {\n  matchedEmail = agentesHabitar[ownerName.trim().toLowerCase()];\n}\n\nif (!matchedEmail) {\n  const correos = Object.values(agentesHabitar);\n  matchedEmail = correos[Math.floor(Math.random() * correos.length)];\n}\n\nreturn { json: { ...item, owner_email: matchedEmail, encontrado, hubspot_contacto_id } };\n      "
+        },
+        "id": "b7417504-1139-4d16-afa6-e706a4205707",
+        "name": "Asignar Owner",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -32,
+          528
+        ]
+      },
+      {
+        "parameters": {
+          "url": "=https://api.hubapi.com/crm/v3/owners?email={{ $json.owner_email }}",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "hubspotAppToken",
+          "options": {}
+        },
+        "id": "86d422c9-3aa6-4ed6-a410-432b66371500",
+        "name": "Traer Owner",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          160,
+          528
+        ]
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForEachItem",
+          "jsCode": "\nconst ownerResponse = $input.item.json;\nconst chatwootData = $('Asignar Owner').item.json;\nconst ownerId = (ownerResponse.results && ownerResponse.results.length > 0) ? String(ownerResponse.results[0].id) : null;\n\nconst properties = {\n  firstname: chatwootData.Nombres,\n  lastname: chatwootData.Apellidos,\n};\nif (chatwootData.Telefono) properties.phone = chatwootData.Telefono;\nif (chatwootData.Email) properties.email = chatwootData.Email;\nif (ownerId) properties.hubspot_owner_id = ownerId;\nproperties.lifecyclestage = \"marketingqualifiedlead\";\n\nreturn {\n  json: {\n    ...chatwootData,\n    hubspot_owner_id: ownerId,\n    upsert_properties: properties\n  }\n};\n      "
+        },
+        "id": "7a66c1b8-60e0-44e0-a7fe-6a8d82c96632",
+        "name": "Preparar Upsert",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          352,
+          528
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "cond2",
+                "leftValue": "={{ $json.encontrado }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "a8fe35a7-eee2-45d9-8137-00501a270d92",
+        "name": "¿Existe Contacto?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          544,
+          528
+        ]
+      },
+      {
+        "parameters": {
+          "mode": "runOnceForEachItem",
+          "jsCode": "\nconst item = $input.item.json;\nconst webhookData = $('Webhook').first().json.body;\n\nlet chatwoot_conversation_id = webhookData.conversation ? String(webhookData.conversation.id) : String(webhookData.id || '');\n\nlet content = webhookData.content;\nif (!content && webhookData.messages && webhookData.messages.length > 0) {\n    content = webhookData.messages[0].content;\n}\ncontent = content || '';\n\nlet attachments = webhookData.attachments;\nif (!attachments && webhookData.messages && webhookData.messages.length > 0) {\n    attachments = webhookData.messages[0].attachments;\n}\nattachments = attachments || [];\n\nlet timestamp_raw = webhookData.created_at;\nif (!timestamp_raw && webhookData.messages && webhookData.messages.length > 0) {\n    timestamp_raw = webhookData.messages[0].created_at;\n}\nlet hs_timestamp;\nif (typeof timestamp_raw === 'string' && timestamp_raw.includes('T')) {\n    hs_timestamp = new Date(timestamp_raw).toISOString();\n} else if (timestamp_raw) {\n    let is_seconds = String(timestamp_raw).length <= 10;\n    let timestamp_ms = is_seconds ? Number(timestamp_raw) * 1000 : Number(timestamp_raw);\n    hs_timestamp = new Date(timestamp_ms).toISOString();\n} else {\n    hs_timestamp = new Date().toISOString();\n}\n\n// Buscar el nombre del emisor correctamente, incluso si está oculto en \"messages[0]\"\nlet sender_name = webhookData.sender?.name;\nif (!sender_name && webhookData.messages && webhookData.messages.length > 0) {\n    sender_name = webhookData.messages[0].sender?.name;\n}\nsender_name = sender_name || webhookData.meta?.sender?.name || webhookData.conversation?.meta?.sender?.name || 'Usuario';\n\n\n// Determinar si es incoming o outgoing\nlet is_incoming = true;\nlet msg_type = webhookData.message_type;\nif (msg_type === undefined && webhookData.messages && webhookData.messages.length > 0) {\n    msg_type = webhookData.messages[0].message_type;\n}\nif (msg_type === 'outgoing' || msg_type === 1 || msg_type === 'template') {\n    is_incoming = false;\n}\n\n// Formatear el contenido\nlet formattedContent = '';\nif (content !== null && content !== undefined && content !== '') {\n    formattedContent = String(content).replace(/\\n/g, '<br>');\n}\n\n// Generar HTML para adjuntos si existen\nlet attachmentHtml = '';\nif (attachments.length > 0) {\n    attachments.forEach(att => {\n        let fileType = att.file_type || 'file'; // 'image', 'audio', 'video', 'file'\n        let url = att.data_url || '';\n        \n        if (fileType === 'image' && url) {\n            // Mostrar imagen directamente\n            attachmentHtml += '<div style=\"margin-top: 5px;\"><a href=\"' + url + '\" target=\"_blank\"><img src=\"' + url + '\" style=\"max-width: 100%; border-radius: 8px; max-height: 250px;\" alt=\"Imagen adjunta\"></a></div>';\n        } else if (fileType === 'audio' && url) {\n            // Enlace descriptivo para audio\n            attachmentHtml += '<div style=\"margin-top: 5px; padding: 6px; background-color: rgba(0,0,0,0.05); border-radius: 4px; font-size: 12px;\">🎵 <b>Audio:</b> <a href=\"' + url + '\" target=\"_blank\" style=\"color: #0056b3; text-decoration: none;\">Escuchar / Descargar</a></div>';\n        } else if (fileType === 'video' && url) {\n            // Enlace descriptivo para video\n            attachmentHtml += '<div style=\"margin-top: 5px; padding: 6px; background-color: rgba(0,0,0,0.05); border-radius: 4px; font-size: 12px;\">🎬 <b>Video:</b> <a href=\"' + url + '\" target=\"_blank\" style=\"color: #0056b3; text-decoration: none;\">Ver / Descargar</a></div>';\n        } else if (url) {\n            // Enlace genérico para archivos\n            attachmentHtml += '<div style=\"margin-top: 5px; padding: 6px; background-color: rgba(0,0,0,0.05); border-radius: 4px; font-size: 12px;\">📎 <b>Archivo:</b> <a href=\"' + url + '\" target=\"_blank\" style=\"color: #0056b3; text-decoration: none;\">Descargar Archivo</a></div>';\n        } else {\n            // Indicador si no hay URL (raro pero posible)\n            attachmentHtml += '<div style=\"margin-top: 5px; padding: 6px; background-color: rgba(0,0,0,0.05); border-radius: 4px; font-size: 12px; font-style: italic;\">📎 [Archivo adjunto en Chatwoot]</div>';\n        }\n    });\n}\n\n// Combinar texto y adjuntos\nlet contentArea = '';\nif (formattedContent) {\n    contentArea += '<div style=\"font-size: 14px; line-height: 1.4;\">' + formattedContent + '</div>';\n}\nif (attachmentHtml) {\n    contentArea += attachmentHtml;\n}\nif (!contentArea) {\n    contentArea = '<div style=\"font-size: 14px; line-height: 1.4; font-style: italic; color: #888;\">[Multimedia]</div>';\n}\n\n// Hora formateada para la burbuja\nlet timeObj = new Date(hs_timestamp);\nlet timeString = timeObj.getHours().toString().padStart(2, '0') + ':' + timeObj.getMinutes().toString().padStart(2, '0');\n\nlet html_bubble = '';\nif (is_incoming) {\n    // Cliente (Izquierda, Gris)\n    html_bubble = '<div style=\"text-align: left; margin-bottom: 12px; margin-top: 4px;\">' +\n      '<div style=\"display: inline-block; background-color: #f0f2f5; color: #1c1e21; padding: 10px 14px; border-radius: 0px 16px 16px 16px; text-align: left; max-width: 85%; border: 1px solid #e4e6eb; font-family: Helvetica, Arial, sans-serif;\">' +\n        '<div style=\"font-size: 11px; color: #65676b; margin-bottom: 4px;\"><b>' + sender_name + '</b></div>' +\n        contentArea +\n        '<div style=\"font-size: 10px; color: #8a8d91; text-align: right; margin-top: 6px;\">' + timeString + '</div>' +\n      '</div>' +\n    '</div>';\n} else {\n    // Agente (Derecha, Verde)\n    html_bubble = '<div style=\"text-align: right; margin-bottom: 12px; margin-top: 4px;\">' +\n      '<div style=\"display: inline-block; background-color: #dcf8c6; color: #1c1e21; padding: 10px 14px; border-radius: 16px 0px 16px 16px; text-align: left; max-width: 85%; border: 1px solid #c2e0ab; font-family: Helvetica, Arial, sans-serif;\">' +\n        '<div style=\"font-size: 11px; color: #4b663b; margin-bottom: 4px;\"><b>' + sender_name + '</b></div>' +\n        contentArea +\n        '<div style=\"font-size: 10px; color: #698a58; text-align: right; margin-top: 6px;\">' + timeString + '</div>' +\n      '</div>' +\n    '</div>';\n}\n\nconst saved_chatwoot_id = item.hubspot_search_result?.properties?.chatwoot_conversation_id || '';\nconst saved_communication_id = item.hubspot_search_result?.properties?.hubspot_communication_id || '';\n\nconst es_misma_conversacion = (saved_chatwoot_id === chatwoot_conversation_id) && saved_communication_id !== '';\n\nreturn {\n  json: {\n    ...item,\n    mensaje_actual: {\n      content,\n      sender_name,\n      chatwoot_conversation_id,\n      hs_timestamp,\n      html_bubble\n    },\n    hubspot_data: {\n      es_misma_conversacion,\n      saved_communication_id\n    }\n  }\n};\n      "
+        },
+        "id": "26fdc1cd-8add-41bd-887b-3b756f2d4153",
+        "name": "Extraer Metadata",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          752,
+          432
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "cond3",
+                "leftValue": "={{ $json.hubspot_data.es_misma_conversacion }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        },
+        "id": "427ba9b2-724e-4ba4-bae4-22babd63432d",
+        "name": "¿Misma Conversación?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2.2,
+        "position": [
+          960,
+          432
+        ]
+      },
+      {
+        "parameters": {
+          "url": "={{ \"https://api.hubapi.com/crm/v3/objects/communications/\" + $json.hubspot_data.saved_communication_id }}",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "hubspotAppToken",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "properties",
+                "value": "hs_communication_body"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "bbbb413d-d06e-4a25-acc2-71cc19426b0a",
+        "name": "Traer Comunicacion Actual",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          1200,
+          560
+        ]
+      },
+      {
+        "parameters": {
+          "method": "PATCH",
+          "url": "={{ \"https://api.hubapi.com/crm/v3/objects/communications/\" + $(\"Extraer Metadata\").item.json.hubspot_data.saved_communication_id }}",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "hubspotAppToken",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ { \"properties\": { \"hs_communication_body\": ($json.properties.hs_communication_body || \"\") + $(\"Extraer Metadata\").item.json.mensaje_actual.html_bubble } } }}",
+          "options": {}
+        },
+        "id": "db963be9-3d2f-403a-9600-3df0832c7999",
+        "name": "Actualizar Comunicacion",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          1408,
+          560
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.hubapi.com/crm/v3/objects/communications",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "hubspotAppToken",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ { \"properties\": { \"hs_communication_channel_type\": \"WHATS_APP\", \"hs_communication_logged_from\": \"CRM\", \"hs_communication_body\": $json.mensaje_actual.html_bubble, \"hubspot_owner_id\": $json.hubspot_owner_id, \"hs_timestamp\": $json.mensaje_actual.hs_timestamp } } }}",
+          "options": {}
+        },
+        "id": "9d46abe8-4fae-4ab4-9d7c-7a8e27dde428",
+        "name": "Crear Comunicacion",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          1200,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "method": "PUT",
+          "url": "={{ \"https://api.hubapi.com/crm/v3/objects/communications/\" + $json.id + \"/associations/contact/\" + $(\"Extraer Metadata\").item.json.hubspot_contacto_id + \"/communication_to_contact\" }}",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "hubspotAppToken",
+          "options": {}
+        },
+        "id": "75345224-2281-4ef8-a8b2-78c41cc74319",
+        "name": "Vincular Contacto",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          1408,
+          304
+        ]
+      },
+      {
+        "parameters": {
+          "method": "PATCH",
+          "url": "={{ \"https://api.hubapi.com/crm/v3/objects/contacts/\" + $(\"Extraer Metadata\").item.json.hubspot_contacto_id }}",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "hubspotAppToken",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ { \"properties\": { \"chatwoot_conversation_id\": $(\"Extraer Metadata\").item.json.mensaje_actual.chatwoot_conversation_id, \"hubspot_communication_id\": $(\"Crear Comunicacion\").item.json.id } } }}",
+          "options": {}
+        },
+        "id": "c52544d7-1fdf-4007-a1cc-8af2372dbe7c",
+        "name": "Guardar IDs Contacto",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          1600,
+          304
+        ]
+      },
+      {
+        "parameters": {},
+        "id": "fe15ff92-c042-419b-99b7-fb6de7a52c64",
+        "name": "No Operation, do nothing",
+        "type": "n8n-nodes-base.noOp",
+        "typeVersion": 1,
+        "position": [
+          752,
+          624
+        ]
+      }
+    ],
+    "connections": {
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Extraer Datos",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Extraer Datos": {
+        "main": [
+          [
+            {
+              "node": "Sanitizar entrada",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Sanitizar entrada": {
+        "main": [
+          [
+            {
+              "node": "Preparar Busqueda",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Preparar Busqueda": {
+        "main": [
+          [
+            {
+              "node": "¿Puede Buscar?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "¿Puede Buscar?": {
+        "main": [
+          [
+            {
+              "node": "Buscar Contacto",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Asignar Owner",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Buscar Contacto": {
+        "main": [
+          [
+            {
+              "node": "Evaluar Busqueda",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Evaluar Busqueda": {
+        "main": [
+          [
+            {
+              "node": "Asignar Owner",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Asignar Owner": {
+        "main": [
+          [
+            {
+              "node": "Traer Owner",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Traer Owner": {
+        "main": [
+          [
+            {
+              "node": "Preparar Upsert",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Preparar Upsert": {
+        "main": [
+          [
+            {
+              "node": "¿Existe Contacto?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "¿Existe Contacto?": {
+        "main": [
+          [
+            {
+              "node": "Extraer Metadata",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "No Operation, do nothing",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Extraer Metadata": {
+        "main": [
+          [
+            {
+              "node": "¿Misma Conversación?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "¿Misma Conversación?": {
+        "main": [
+          [
+            {
+              "node": "Traer Comunicacion Actual",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "Crear Comunicacion",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Traer Comunicacion Actual": {
+        "main": [
+          [
+            {
+              "node": "Actualizar Comunicacion",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Crear Comunicacion": {
+        "main": [
+          [
+            {
+              "node": "Vincular Contacto",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Vincular Contacto": {
+        "main": [
+          [
+            {
+              "node": "Guardar IDs Contacto",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    }
+  },
+  "tags": [],
+  "meta": {
+    "aiBuilderAssisted": true
+  },
+  "parentFolderId": null,
+  "description": "Support handling and rendering attachments (images, audio, video, files) inside chat bubbles in the Extraer Metadata node",
+  "scopes": [
+    "workflow:create",
+    "workflow:delete",
+    "workflow:execute",
+    "workflow:execute-chat",
+    "workflow:list",
+    "workflow:move",
+    "workflow:publish",
+    "workflow:read",
+    "workflow:share",
+    "workflow:unpublish",
+    "workflow:unshare",
+    "workflow:update",
+    "workflow:updateRedactionSetting"
+  ],
+  "canExecute": true
+}

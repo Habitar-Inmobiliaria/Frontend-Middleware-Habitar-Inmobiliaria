@@ -37,12 +37,15 @@ let detailMapInstance = null;
 let detailVideoOverlay = null;
 const unavailableProbeCache = new Map();
 const unavailableProbeInFlight = new Map();
+const n8nScrapeCache = new Map();
+const n8nScrapeInFlight = new Map();
 const HISTORICO_PAGE_SIZE = 10;
 const VITRINA_FETCH_ATTEMPTS = 3;
 const VITRINA_503_MAX_RETRIES = 5;
 const VITRINA_503_BACKOFF_MS = 500;
 const VITRINA_SESSION_PREFIX = 'vitrina_last_ok_';
 const VITRINA_304_MAX_DEPTH = 3;
+const N8N_SCRAPE_INMUEBLE_URL = 'https://n8n-automatizations.habitarinmobiliaria.co/webhook/scrape-inmueble';
 
 /**
  * Extract the numeric wasi ID from urlReferencia.
@@ -157,6 +160,36 @@ function applyWasiProbeDataToProperty(prop, data) {
     if (nextImage) prop.imagenUrl = nextImage;
     if (nextPrice) prop.precioFormateado = nextPrice;
     if (nextUrl) prop.urlReferencia = nextUrl;
+}
+
+async function tryRecoverUnavailableProperty(prop, displayPropertyId) {
+    const ref = String(displayPropertyId || '').trim();
+    if (!ref || !prop) return;
+
+    const refreshIfNeeded = () => {
+        const stillUnavailable = isUnavailablePropertyView(prop, {
+            title: normalizeDisplayText(prop.titulo),
+            location: normalizeDisplayText(prop.ubicacion),
+            description: normalizeDisplayText(prop.descripcionCorta)
+        });
+        if (!stillUnavailable) renderCurrentTab();
+    };
+
+    const probeData = await api.getWasiPropertyByReferencia(ref);
+    if (probeData) {
+        applyWasiProbeDataToProperty(prop, probeData);
+        refreshIfNeeded();
+        if (!isUnavailablePropertyView(prop, {
+            title: normalizeDisplayText(prop.titulo),
+            location: normalizeDisplayText(prop.ubicacion),
+            description: normalizeDisplayText(prop.descripcionCorta)
+        })) return;
+    }
+
+    const scrapeData = await api.scrapeInmuebleByReferencia(ref);
+    if (!scrapeData) return;
+    applyWasiProbeDataToProperty(prop, scrapeData);
+    refreshIfNeeded();
 }
 
 // ============================================================
@@ -279,6 +312,45 @@ const api = {
 
         unavailableProbeInFlight.set(cacheKey, probePromise);
         return probePromise;
+    },
+
+    async scrapeInmuebleByReferencia(referencia) {
+        const ref = String(referencia || '').trim();
+        if (!ref) return null;
+
+        const cacheKey = `n8n-scrape-${ref}`;
+        if (n8nScrapeCache.has(cacheKey)) {
+            return n8nScrapeCache.get(cacheKey);
+        }
+        if (n8nScrapeInFlight.has(cacheKey)) {
+            return n8nScrapeInFlight.get(cacheKey);
+        }
+
+        const scrapePromise = (async () => {
+            try {
+                const res = await fetch(N8N_SCRAPE_INMUEBLE_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: ref })
+                });
+                if (!res.ok) {
+                    n8nScrapeCache.set(cacheKey, null);
+                    return null;
+                }
+                const raw = await res.json();
+                const normalized = normalizeWasiProbePayload(raw);
+                n8nScrapeCache.set(cacheKey, normalized || null);
+                return normalized || null;
+            } catch {
+                n8nScrapeCache.set(cacheKey, null);
+                return null;
+            } finally {
+                n8nScrapeInFlight.delete(cacheKey);
+            }
+        })();
+
+        n8nScrapeInFlight.set(cacheKey, scrapePromise);
+        return scrapePromise;
     },
 
     async getComentarios(token) {
@@ -909,22 +981,8 @@ function renderCurrentTab() {
         if (unavailableView) {
             applyUnavailableCardState();
 
-            // Regla especial: solo para cards no disponibles, verificar en Wasi por referencia.
-            if (displayPropertyId) {
-                api.getWasiPropertyByReferencia(displayPropertyId).then((probeData) => {
-                    if (!probeData) return;
-                    applyWasiProbeDataToProperty(prop, probeData);
-
-                    const stillUnavailable = isUnavailablePropertyView(prop, {
-                        title: normalizeDisplayText(prop.titulo),
-                        location: normalizeDisplayText(prop.ubicacion),
-                        description: normalizeDisplayText(prop.descripcionCorta)
-                    });
-                    if (!stillUnavailable) {
-                        renderCurrentTab();
-                    }
-                });
-            }
+            // Regla especial: Wasi por referencia; si falla o sigue vacío → webhook n8n scrape.
+            if (displayPropertyId) tryRecoverUnavailableProperty(prop, displayPropertyId);
         } else {
             titleEl.textContent = cleanTitle;
             if (cleanLocation) {
@@ -951,6 +1009,7 @@ function renderCurrentTab() {
                 applyUnavailableCardState();
                 imageWrapper.style.cursor = 'default';
                 titleEl.style.cursor = 'default';
+                if (displayPropertyId) tryRecoverUnavailableProperty(prop, displayPropertyId);
                 return;
             }
 
