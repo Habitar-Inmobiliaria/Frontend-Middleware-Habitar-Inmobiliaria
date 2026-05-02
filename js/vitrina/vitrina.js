@@ -162,6 +162,51 @@ function applyWasiProbeDataToProperty(prop, data) {
     if (nextUrl) prop.urlReferencia = nextUrl;
 }
 
+function cacheRecoveredDetail(prop, data, referenciaId = '') {
+    const normalizedData = normalizeWasiProbePayload(data);
+    if (!normalizedData || !prop) return;
+
+    const mergedDetail = {
+        ...normalizedData,
+        titulo: normalizeDisplayText(normalizedData.titulo || normalizedData.title || normalizedData.nombre || prop.titulo),
+        ubicacion: normalizeDisplayText(normalizedData.ubicacion || normalizedData.location || normalizedData.ciudad || prop.ubicacion),
+        descripcionCorta: normalizeDisplayText(
+            normalizedData.descripcionCorta
+            || normalizedData.observaciones
+            || normalizedData.descripcion
+            || normalizedData.description
+            || prop.descripcionCorta
+        ),
+        precioFormateado: normalizeDisplayText(normalizedData.precioFormateado || normalizedData.precio_formateado || prop.precioFormateado),
+        urlReferencia: normalizeDisplayText(normalizedData.urlReferencia || normalizedData.url || normalizedData.link || prop.urlReferencia || prop.url),
+        galeriasImagenes: Array.isArray(normalizedData.galeriasImagenes)
+            ? normalizedData.galeriasImagenes
+            : (Array.isArray(normalizedData.imagenes) ? normalizedData.imagenes : []),
+        imagenes: Array.isArray(normalizedData.imagenes)
+            ? normalizedData.imagenes
+            : (Array.isArray(normalizedData.galeriasImagenes) ? normalizedData.galeriasImagenes : [])
+    };
+
+    if (mergedDetail.precio && !mergedDetail.precioFormateado) {
+        mergedDetail.precioFormateado = `$${Number(mergedDetail.precio).toLocaleString('es-CO')}`;
+    }
+
+    const keys = new Set();
+    const directId = String(prop.id || '').trim();
+    const propRef = String(referenciaId || '').trim();
+    const byUrl = extractPropertyIdFromUrl(prop.url || prop.urlReferencia || prop.urlInmueble || '');
+    const detailUrl = extractPropertyIdFromUrl(mergedDetail.urlReferencia || mergedDetail.url || mergedDetail.link || '');
+    const detailId = String(mergedDetail.id || '').trim();
+
+    if (directId) keys.add(directId);
+    if (propRef) keys.add(propRef);
+    if (byUrl) keys.add(byUrl);
+    if (detailUrl) keys.add(detailUrl);
+    if (detailId) keys.add(detailId);
+
+    keys.forEach((k) => detailCache.set(String(k), mergedDetail));
+}
+
 function setUnavailableVerifyingIndicator(card, show) {
     if (!card) return;
     const details = card.querySelector('.property-details');
@@ -212,6 +257,7 @@ async function tryRecoverUnavailableProperty(prop, displayPropertyId, cardEl) {
         const probeData = await api.getWasiPropertyByReferencia(ref);
         if (probeData) {
             applyWasiProbeDataToProperty(prop, probeData);
+            cacheRecoveredDetail(prop, probeData, ref);
             refreshIfNeeded();
             if (!isUnavailablePropertyView(prop, {
                 title: normalizeDisplayText(prop.titulo),
@@ -223,6 +269,7 @@ async function tryRecoverUnavailableProperty(prop, displayPropertyId, cardEl) {
         const scrapeData = await api.scrapeInmuebleByReferencia(ref);
         if (!scrapeData) return;
         applyWasiProbeDataToProperty(prop, scrapeData);
+        cacheRecoveredDetail(prop, scrapeData, ref);
         refreshIfNeeded();
     } finally {
         if (cardEl?.isConnected) setUnavailableVerifyingIndicator(cardEl, false);
@@ -404,7 +451,9 @@ const api = {
 
     async getPropertyDetail(token, wasiId, options = {}) {
         const { cancelPrevious = false } = options;
+        const cacheKey = String(wasiId || '').trim();
         // Cache hit — devolver inmediatamente sin red
+        if (detailCache.has(cacheKey)) return detailCache.get(cacheKey);
         if (detailCache.has(wasiId)) return detailCache.get(wasiId);
 
         // Solo cancelar petición previa en flujos interactivos (modal),
@@ -439,6 +488,7 @@ const api = {
                 }
             }
 
+            detailCache.set(cacheKey, data);
             detailCache.set(wasiId, data);
             return data;
         } catch (err) {
