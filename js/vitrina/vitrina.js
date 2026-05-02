@@ -1348,6 +1348,30 @@ function showToast(msg) {
 // ============================================================
 // Modal: Property Detail
 // ============================================================
+function getCandidateDetailCacheKeys(listProp, propOrId) {
+    const keys = new Set();
+    const direct = String(propOrId ?? '').trim();
+    const listId = String(listProp?.id ?? '').trim();
+    const code = String(listProp?.codigoNumerico ?? '').trim();
+    const fromListUrl = extractPropertyIdFromUrl(listProp?.url || listProp?.urlReferencia || listProp?.urlInmueble || '');
+    const fromListPropId = String(listProp?.id_inmueble || '').trim();
+
+    if (direct) keys.add(direct);
+    if (listId) keys.add(listId);
+    if (code) keys.add(code);
+    if (fromListUrl) keys.add(fromListUrl);
+    if (fromListPropId) keys.add(fromListPropId);
+    return Array.from(keys);
+}
+
+function findCachedDetailForProperty(listProp, propOrId) {
+    const keys = getCandidateDetailCacheKeys(listProp, propOrId);
+    for (const key of keys) {
+        if (detailCache.has(key)) return detailCache.get(key);
+    }
+    return null;
+}
+
 function openPropertyDetail(propOrId) {
     const listProp = typeof propOrId === 'object' && propOrId !== null
         ? propOrId
@@ -1359,6 +1383,16 @@ function openPropertyDetail(propOrId) {
     elModal.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';   // freeze background scroll
 
+    const cachedDetail = findCachedDetailForProperty(listProp, propOrId);
+    if (cachedDetail) {
+        elModalBody.innerHTML = buildDetailHTML(cachedDetail, listProp);
+        initGallery();
+        initDetailVideoSection();
+        initModalDetailFooter(cachedDetail, listProp);
+        initDetailMapSection();
+        return;
+    }
+
     api.getPropertyDetail(state.token, propertyId, { cancelPrevious: true })
         .then(d => {
             elModalBody.innerHTML = buildDetailHTML(d, listProp);
@@ -1368,6 +1402,15 @@ function openPropertyDetail(propOrId) {
             initDetailMapSection();
         })
         .catch(() => {
+            const lateCacheDetail = findCachedDetailForProperty(listProp, propOrId);
+            if (lateCacheDetail) {
+                elModalBody.innerHTML = buildDetailHTML(lateCacheDetail, listProp);
+                initGallery();
+                initDetailVideoSection();
+                initModalDetailFooter(lateCacheDetail, listProp);
+                initDetailMapSection();
+                return;
+            }
             elModalBody.innerHTML = '<p class="modal-error">Error cargando el detalle del inmueble.</p>';
         });
 }
