@@ -992,6 +992,7 @@ function renderCurrentTab() {
             elHistoricoNext.disabled = state.historicoPage === totalPages;
         }
     }
+    if (tab !== 'historico') filtered = [...filtered].reverse();
 
     renderImportantInfoVisibility();
 
