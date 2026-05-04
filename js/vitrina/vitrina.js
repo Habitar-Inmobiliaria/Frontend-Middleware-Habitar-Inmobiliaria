@@ -168,10 +168,6 @@ function applyLocationRestrictionToProperty(prop) {
     prop.ubicacion = '';
     prop.zona = '';
     prop.direccion = '';
-    prop.latitude = '';
-    prop.longitude = '';
-    prop.map = '';
-    prop.id_publish_on_map = 1;
 }
 
 function cacheRecoveredDetail(prop, data, referenciaId = '', { locationRestricted = false } = {}) {
@@ -194,10 +190,10 @@ function cacheRecoveredDetail(prop, data, referenciaId = '', { locationRestricte
         ),
         zona: isLocationRestricted ? '' : normalizeDisplayText(normalizedData.zona || prop.zona),
         direccion: isLocationRestricted ? '' : normalizeDisplayText(normalizedData.direccion || prop.direccion),
-        latitude: isLocationRestricted ? '' : (normalizedData.latitude ?? prop.latitude ?? ''),
-        longitude: isLocationRestricted ? '' : (normalizedData.longitude ?? prop.longitude ?? ''),
-        map: isLocationRestricted ? '' : (normalizedData.map ?? prop.map ?? ''),
-        id_publish_on_map: isLocationRestricted ? 1 : (normalizedData.id_publish_on_map ?? prop.id_publish_on_map),
+        latitude: normalizedData.latitude ?? prop.latitude ?? '',
+        longitude: normalizedData.longitude ?? prop.longitude ?? '',
+        map: normalizedData.map ?? prop.map ?? '',
+        id_publish_on_map: normalizedData.id_publish_on_map ?? prop.id_publish_on_map,
         _locationRestricted: isLocationRestricted,
         precioFormateado: normalizeDisplayText(normalizedData.precioFormateado || normalizedData.precio_formateado || prop.precioFormateado),
         urlReferencia: normalizeDisplayText(normalizedData.urlReferencia || normalizedData.url || normalizedData.link || prop.urlReferencia || prop.url),
@@ -1678,7 +1674,6 @@ function getGeoMeta(detail) {
 }
 
 function buildMapSectionHTML(detail) {
-    if (detail?._locationRestricted) return '';
     const geo = getGeoMeta(detail);
     const isSupportedMode = geo.publishMode === 1 || geo.publishMode === 2 || geo.publishMode === 3;
 
