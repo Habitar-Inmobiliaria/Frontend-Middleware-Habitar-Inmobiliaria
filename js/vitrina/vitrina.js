@@ -155,21 +155,36 @@ function applyWasiProbeDataToProperty(prop, data) {
     );
 
     if (nextTitle) prop.titulo = nextTitle;
-    if (nextLocation) prop.ubicacion = nextLocation;
+    if (!prop._locationRestricted && nextLocation) prop.ubicacion = nextLocation;
     if (nextDescription) prop.descripcionCorta = nextDescription;
     if (nextImage) prop.imagenUrl = nextImage;
     if (nextPrice) prop.precioFormateado = nextPrice;
     if (nextUrl) prop.urlReferencia = nextUrl;
 }
 
-function cacheRecoveredDetail(prop, data, referenciaId = '') {
+function applyLocationRestrictionToProperty(prop) {
+    if (!prop) return;
+    prop._locationRestricted = true;
+    prop.ubicacion = '';
+    prop.zona = '';
+    prop.direccion = '';
+    prop.latitude = '';
+    prop.longitude = '';
+    prop.map = '';
+    prop.id_publish_on_map = 1;
+}
+
+function cacheRecoveredDetail(prop, data, referenciaId = '', { locationRestricted = false } = {}) {
     const normalizedData = normalizeWasiProbePayload(data);
     if (!normalizedData || !prop) return;
+    const isLocationRestricted = Boolean(locationRestricted || prop._locationRestricted);
 
     const mergedDetail = {
         ...normalizedData,
         titulo: normalizeDisplayText(normalizedData.titulo || normalizedData.title || normalizedData.nombre || prop.titulo),
-        ubicacion: normalizeDisplayText(normalizedData.ubicacion || normalizedData.location || normalizedData.ciudad || prop.ubicacion),
+        ubicacion: isLocationRestricted
+            ? ''
+            : normalizeDisplayText(normalizedData.ubicacion || normalizedData.location || normalizedData.ciudad || prop.ubicacion),
         descripcionCorta: normalizeDisplayText(
             normalizedData.descripcionCorta
             || normalizedData.observaciones
@@ -177,6 +192,13 @@ function cacheRecoveredDetail(prop, data, referenciaId = '') {
             || normalizedData.description
             || prop.descripcionCorta
         ),
+        zona: isLocationRestricted ? '' : normalizeDisplayText(normalizedData.zona || prop.zona),
+        direccion: isLocationRestricted ? '' : normalizeDisplayText(normalizedData.direccion || prop.direccion),
+        latitude: isLocationRestricted ? '' : (normalizedData.latitude ?? prop.latitude ?? ''),
+        longitude: isLocationRestricted ? '' : (normalizedData.longitude ?? prop.longitude ?? ''),
+        map: isLocationRestricted ? '' : (normalizedData.map ?? prop.map ?? ''),
+        id_publish_on_map: isLocationRestricted ? 1 : (normalizedData.id_publish_on_map ?? prop.id_publish_on_map),
+        _locationRestricted: isLocationRestricted,
         precioFormateado: normalizeDisplayText(normalizedData.precioFormateado || normalizedData.precio_formateado || prop.precioFormateado),
         urlReferencia: normalizeDisplayText(normalizedData.urlReferencia || normalizedData.url || normalizedData.link || prop.urlReferencia || prop.url),
         galeriasImagenes: Array.isArray(normalizedData.galeriasImagenes)
@@ -256,8 +278,9 @@ async function tryRecoverUnavailableProperty(prop, displayPropertyId, cardEl) {
 
         const probeData = await api.getWasiPropertyByReferencia(ref);
         if (probeData) {
+            applyLocationRestrictionToProperty(prop);
             applyWasiProbeDataToProperty(prop, probeData);
-            cacheRecoveredDetail(prop, probeData, ref);
+            cacheRecoveredDetail(prop, probeData, ref, { locationRestricted: true });
             refreshIfNeeded();
             if (!isUnavailablePropertyView(prop, {
                 title: normalizeDisplayText(prop.titulo),
@@ -268,8 +291,9 @@ async function tryRecoverUnavailableProperty(prop, displayPropertyId, cardEl) {
 
         const scrapeData = await api.scrapeInmuebleByReferencia(ref);
         if (!scrapeData) return;
+        applyLocationRestrictionToProperty(prop);
         applyWasiProbeDataToProperty(prop, scrapeData);
-        cacheRecoveredDetail(prop, scrapeData, ref);
+        cacheRecoveredDetail(prop, scrapeData, ref, { locationRestricted: true });
         refreshIfNeeded();
     } finally {
         if (cardEl?.isConnected) setUnavailableVerifyingIndicator(cardEl, false);
@@ -1013,7 +1037,7 @@ function renderCurrentTab() {
         const descriptionEl = card.querySelector('.property-description');
         const actionBar = card.querySelector('.action-bar');
         const cleanTitle = normalizeDisplayText(prop.titulo);
-        const cleanLocation = normalizeDisplayText(prop.ubicacion);
+        const cleanLocation = prop._locationRestricted ? '' : normalizeDisplayText(prop.ubicacion);
         const cleanDescription = normalizeDisplayText(prop.descripcionCorta);
 
         card.dataset.id = prop.id;
@@ -1073,7 +1097,7 @@ function renderCurrentTab() {
             if (displayPropertyId) void tryRecoverUnavailableProperty(prop, displayPropertyId, card);
         } else {
             titleEl.textContent = cleanTitle;
-            if (cleanLocation) {
+            if (!prop._locationRestricted && cleanLocation) {
                 locationEl.textContent = `📍 ${cleanLocation}`;
                 locationEl.classList.remove('hidden');
             } else {
@@ -1654,6 +1678,7 @@ function getGeoMeta(detail) {
 }
 
 function buildMapSectionHTML(detail) {
+    if (detail?._locationRestricted) return '';
     const geo = getGeoMeta(detail);
     const isSupportedMode = geo.publishMode === 1 || geo.publishMode === 2 || geo.publishMode === 3;
 
@@ -1909,14 +1934,17 @@ function buildDetailHTML(d, listProp = null) {
         || listProp?.id
         || ''
     ).trim();
+    const isLocationRestricted = Boolean(d?._locationRestricted || listProp?._locationRestricted);
 
     const specRows = [
         ['ID inmueble',          detailPropertyId],
         ['Tipo de negocio',      d.tipoNegocio],
         ['Tipo de inmueble',     d.tipoInmueble],
-        ['Ubicación',            d.ubicacion],
-        ['Zona',                 d.zona],
-        ['Dirección',            d.direccion],
+        ...(!isLocationRestricted ? [
+            ['Ubicación',            d.ubicacion],
+            ['Zona',                 d.zona],
+            ['Dirección',            d.direccion],
+        ] : []),
         ['Estrato',              d.estrato],
         ['Piso',                 d.piso],
         ['Habitaciones',         d.habitaciones],
