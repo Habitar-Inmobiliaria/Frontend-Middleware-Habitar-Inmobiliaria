@@ -249,6 +249,37 @@ body::before {
     transform: translateY(-1px);
 }
 
+.sidebar-buscador-cta {
+    margin-top: 12px;
+}
+
+.sidebar-buscador-link {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #BFDBFE;
+    border-radius: 12px;
+    background: #EFF6FF;
+    color: #1D4ED8;
+    font-family: var(--font-family);
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1.45;
+    padding: 12px 14px;
+    text-align: center;
+    text-decoration: none;
+    box-shadow: var(--shadow-sm);
+    transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.sidebar-buscador-link:hover {
+    background: #DBEAFE;
+    border-color: #93C5FD;
+    transform: translateY(-1px);
+}
+
 .important-info {
     margin-top: 12px;
     position: relative;
@@ -767,6 +798,11 @@ body::before {
         width: 100%;
         max-height: none;
         margin-top: 8px;
+    }
+
+    .sidebar-buscador-link {
+        font-size: 0.8rem;
+        padding: 11px 12px;
     }
 
     .property-scroll-container {
