@@ -257,10 +257,10 @@ body::before {
     display: block;
     width: 100%;
     box-sizing: border-box;
-    border: 1px solid #BFDBFE;
+    border: 1px solid var(--border-color);
     border-radius: 12px;
-    background: #EFF6FF;
-    color: #1D4ED8;
+    background: #fff;
+    color: var(--text-primary);
     font-family: var(--font-family);
     font-size: 0.82rem;
     font-weight: 600;
@@ -274,10 +274,25 @@ body::before {
     word-break: break-word;
 }
 
+.sidebar-buscador-text {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.sidebar-buscador-highlight {
+    color: #1D4ED8;
+    font-weight: 700;
+}
+
 .sidebar-buscador-link:hover {
-    background: #DBEAFE;
-    border-color: #93C5FD;
+    background: #F9FAFB;
+    border-color: #D1D5DB;
     transform: translateY(-1px);
+}
+
+.sidebar-buscador-link:hover .sidebar-buscador-highlight {
+    color: #1E40AF;
+    text-decoration: underline;
 }
 
 .important-info {
