@@ -44,6 +44,8 @@ const VITRINA_FETCH_ATTEMPTS = 3;
 const VITRINA_503_MAX_RETRIES = 5;
 const VITRINA_503_BACKOFF_MS = 500;
 const VITRINA_SESSION_PREFIX = 'vitrina_last_ok_';
+/** Una vez por pestaña/sesión: evita llamadas duplicadas a POST …/notificar-visita. */
+const VITRINA_VISITA_SESSION_PREFIX = 'vitrina_notificar_visita_';
 const VITRINA_304_MAX_DEPTH = 3;
 const N8N_SCRAPE_INMUEBLE_URL = 'https://n8n-automatizations.habitarinmobiliaria.co/webhook/scrape-inmueble';
 
@@ -545,8 +547,72 @@ const api = {
         });
         if (!res.ok) await handleApiError(res);
         return res.ok;
+    },
+
+    /**
+     * Notifica ingreso a la vitrina (HubSpot vía middleware). Éxito típico: 204 sin cuerpo.
+     */
+    async notificarVisita(payload) {
+        const contactId = String(payload?.contactId || '').trim();
+        if (!contactId) throw new Error('contactId requerido');
+
+        const body = { contactId };
+        const nombre = String(payload?.nombreProspecto || '').trim();
+        if (nombre) body.nombreProspecto = nombre;
+        const disp = String(payload?.dispositivo || '').trim();
+        if (disp) body.dispositivo = disp;
+
+        const res = await fetch(`${API_BASE}/notificar-visita`, {
+            method:  'POST',
+            headers: { ...TUNNEL_HEADERS, 'Content-Type': 'application/json' },
+            body:    JSON.stringify(body)
+        });
+
+        if (res.ok) return;
+        await handleApiError(res);
     }
 };
+
+function getDeviceLabelForNotificacion() {
+    try {
+        if (navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean') {
+            return navigator.userAgentData.mobile ? 'Mobile' : 'Desktop';
+        }
+    } catch { /* ignore */ }
+    const ua = navigator.userAgent || '';
+    return /Mobi|Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua) ? 'Mobile' : 'Desktop';
+}
+
+/**
+ * Fire-and-forget: una sola vez por sesión de navegador y contactId (sessionStorage).
+ */
+function tryNotifyVitrinaVisitOnce(contactId, options = {}) {
+    const id = String(contactId || '').trim();
+    if (!id) return;
+
+    const sessionKey = `${VITRINA_VISITA_SESSION_PREFIX}${id}`;
+    try {
+        if (sessionStorage.getItem(sessionKey) === '1') return;
+    } catch { /* ignore */ }
+
+    const nombreRaw = String(options.nombreProspecto || '').trim();
+    const payload = {
+        contactId: id,
+        dispositivo: getDeviceLabelForNotificacion()
+    };
+    if (nombreRaw) payload.nombreProspecto = nombreRaw;
+
+    void (async () => {
+        try {
+            await api.notificarVisita(payload);
+            try {
+                sessionStorage.setItem(sessionKey, '1');
+            } catch { /* ignore */ }
+        } catch (e) {
+            console.warn('[Vitrina] notificar-visita:', e);
+        }
+    })();
+}
 
 
 // ============================================================
@@ -2364,6 +2430,14 @@ async function init() {
         renderAgent(state.agent);
         updateBadges();
         renderCurrentTab();
+
+        const nombreProspecto =
+            normalizeDisplayText(data?.nombreProspecto)
+            || normalizeDisplayText(data?.nombreContacto)
+            || '';
+        tryNotifyVitrinaVisitOnce(state.token, {
+            nombreProspecto: nombreProspecto || undefined
+        });
 
     } catch (err) {
         console.error(err);
