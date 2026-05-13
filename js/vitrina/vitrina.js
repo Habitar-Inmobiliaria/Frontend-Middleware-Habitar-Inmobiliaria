@@ -1,7 +1,7 @@
 // ============================================================
 // Constants & Config
 // ============================================================
-const API_BASE     = 'http://localhost:8080/api/v1/vitrina';
+const API_BASE     = 'https://backend-middleware-habitar-inmobiliaria-production.up.railway.app/api/v1/vitrina';
 const DEFAULT_TOKEN = '197928127379';
 
 // Header needed to bypass localtunnel's HTML verification page
@@ -1013,7 +1013,7 @@ function renderImportantInfoPanel() {
     const mobileDock = isImportantInfoMobileDockViewport();
     const embedPanelOpen = infoState.embedMode
         && (!mobileDock || !infoState.mobileDockCollapsed);
-    const panelOpen = infoState.embedMode ? embedPanelOpen : infoState.open;
+    const panelOpen = infoState.open || embedPanelOpen;
     elImportantInfoPanel.classList.toggle('hidden', !panelOpen);
     elImportantInfoToggle.setAttribute('aria-expanded', panelOpen ? 'true' : 'false');
     if (elImportantInfoChevron) {
@@ -1159,7 +1159,7 @@ function renderImportantInfoVisibility() {
     elImportantInfoSection.classList.remove('hidden');
     elImportantInfoSection.classList.add('important-info--embed');
     state.importantInfo.embedMode = true;
-    state.importantInfo.open = false;
+    state.importantInfo.open = true;
     renderImportantInfoPanel();
     elImportantInfoSection.classList.toggle(
         'important-info--mobile-dock-collapsed',
@@ -1245,7 +1245,6 @@ function renderCurrentTab() {
 
     if (filtered.length === 0) {
         showEmptyState(tab);
-        scheduleImportantInfoDockPaddingSync();
         return;
     }
 
@@ -1393,7 +1392,6 @@ function renderCurrentTab() {
     });
 
     elPropertyList.appendChild(fragment);
-    scheduleImportantInfoDockPaddingSync();
 }
 
 // ============================================================
@@ -2622,5 +2620,3 @@ async function init() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
-window.addEventListener('resize', scheduleImportantInfoDockPaddingSync);
-window.addEventListener('orientationchange', scheduleImportantInfoDockPaddingSync);
