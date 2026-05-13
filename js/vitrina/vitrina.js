@@ -1,7 +1,7 @@
 // ============================================================
 // Constants & Config
 // ============================================================
-const API_BASE     = 'https://backend-middleware-habitar-inmobiliaria-production.up.railway.app/api/v1/vitrina';
+const API_BASE     = 'http://localhost:8080/api/v1/vitrina';
 const DEFAULT_TOKEN = '197928127379';
 
 // Header needed to bypass localtunnel's HTML verification page
@@ -27,6 +27,9 @@ const state = {
     historicoPage: 1,
     importantInfo: {
         open: false,
+        embedMode: false,
+        /** Solo móvil (≤900px): dock inferior colapsado = solo barra. */
+        mobileDockCollapsed: false,
         loading: false,
         loaded: false,
         comments: [],
@@ -813,6 +816,7 @@ const elHistoricoPrev = document.getElementById('historico-prev');
 const elHistoricoNext = document.getElementById('historico-next');
 const elHistoricoPageInfo = document.getElementById('historico-page-info');
 const elHistoricoLoading = document.getElementById('historico-loading');
+const elPropertyMainWrap = document.getElementById('property-main-wrap');
 const elImportantInfoSection = document.getElementById('important-info-section');
 const elImportantInfoToggle = document.getElementById('important-info-toggle');
 const elImportantInfoChevron = elImportantInfoToggle?.querySelector('.important-info-chevron');
@@ -878,6 +882,40 @@ function renderAgent(agent) {
     `;
 }
 
+function isImportantInfoMobileDockViewport() {
+    return typeof window !== 'undefined'
+        && typeof window.matchMedia === 'function'
+        && window.matchMedia('(max-width: 900px)').matches;
+}
+
+function syncImportantInfoMobileDockPadding() {
+    if (!elPropertyMainWrap || !elImportantInfoSection) return;
+    const dockActive = state.activeTab === 'aprobadas'
+        && shouldShowImportantInfoSidebar()
+        && state.importantInfo.embedMode
+        && isImportantInfoMobileDockViewport();
+
+    if (!dockActive) {
+        document.documentElement.style.removeProperty('--vitrina-important-dock-pad');
+        return;
+    }
+
+    requestAnimationFrame(() => {
+        const h = elImportantInfoSection.offsetHeight || 0;
+        const extra = 16;
+        document.documentElement.style.setProperty(
+            '--vitrina-important-dock-pad',
+            `${Math.ceil(h + extra)}px`
+        );
+    });
+}
+
+let importantInfoDockResizeTimer;
+function scheduleImportantInfoDockPaddingSync() {
+    window.clearTimeout(importantInfoDockResizeTimer);
+    importantInfoDockResizeTimer = window.setTimeout(syncImportantInfoMobileDockPadding, 120);
+}
+
 function formatCommentDate(iso) {
     if (!iso) return '';
     try {
@@ -893,62 +931,108 @@ function formatCommentDate(iso) {
     }
 }
 
+function escapeAttrSelector(value) {
+    const s = String(value ?? '');
+    if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+        return CSS.escape(s);
+    }
+    return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+/**
+ * Localiza la tarjeta de inmueble por código (data-property-code).
+ * Intenta coincidencia exacta y, si hace falta, compara con los códigos del DOM.
+ */
+function findPropertyCardByCode(propertyCode) {
+    const raw = String(propertyCode || '').trim();
+    if (!raw) return null;
+
+    const esc = escapeAttrSelector(raw);
+    let card = elPropertyList.querySelector(`.property-card[data-property-code="${esc}"]`);
+    if (card) return card;
+
+    const cards = elPropertyList.querySelectorAll('.property-card[data-property-code]');
+    const norm = (x) => String(x || '').trim();
+    const rawLower = raw.toLowerCase();
+    for (const c of cards) {
+        const pc = norm(c.dataset.propertyCode);
+        if (pc === raw) return c;
+        if (pc.toLowerCase() === rawLower) return c;
+    }
+    if (/^\d+$/.test(raw)) {
+        for (const c of cards) {
+            const pc = norm(c.dataset.propertyCode);
+            if (pc === raw) return c;
+            const digits = pc.replace(/\D/g, '');
+            if (digits === raw || pc.endsWith(raw) || raw.endsWith(pc)) return c;
+        }
+    }
+    return null;
+}
+
+const PROPERTY_CARD_HIGHLIGHT_MS = 2800;
+
 function scrollToPropertyCardByCode(propertyCode) {
     const code = String(propertyCode || '').trim();
     if (!code) return;
 
-    const card = elPropertyList.querySelector(`.property-card[data-property-code="${code}"]`);
+    const card = findPropertyCardByCode(code);
     if (!card) {
         showToast(`No se encontró el inmueble ${code} en esta lista.`);
         return;
     }
 
-    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    card.classList.remove('property-card-highlight');
+    // Reflow para reiniciar la animación si ya estaba resaltada
+    void card.offsetWidth;
     card.classList.add('property-card-highlight');
-    setTimeout(() => card.classList.remove('property-card-highlight'), 1400);
+
+    let fallbackTimer = null;
+    const onAnimEnd = (e) => {
+        if (e.animationName !== 'property-card-spotlight') return;
+        if (fallbackTimer != null) {
+            window.clearTimeout(fallbackTimer);
+            fallbackTimer = null;
+        }
+        card.classList.remove('property-card-highlight');
+        card.removeEventListener('animationend', onAnimEnd);
+    };
+    card.addEventListener('animationend', onAnimEnd);
+    fallbackTimer = window.setTimeout(() => {
+        fallbackTimer = null;
+        card.classList.remove('property-card-highlight');
+        card.removeEventListener('animationend', onAnimEnd);
+    }, PROPERTY_CARD_HIGHLIGHT_MS);
 }
 
 function renderImportantInfoPanel() {
     if (!elImportantInfoPanel || !elImportantInfoContent || !elImportantInfoToggle) return;
 
     const infoState = state.importantInfo;
-    elImportantInfoPanel.classList.toggle('hidden', !infoState.open);
-    elImportantInfoToggle.setAttribute('aria-expanded', infoState.open ? 'true' : 'false');
-    if (elImportantInfoChevron) elImportantInfoChevron.textContent = infoState.open ? '▴' : '▾';
-    if (!infoState.open) return;
-
-    if (infoState.loading) {
-        elImportantInfoContent.innerHTML = `
-            <div class="important-info-status">
-                <div class="spinner"></div>
-                <p>Cargando información importante...</p>
-            </div>
-        `;
-        return;
+    const mobileDock = isImportantInfoMobileDockViewport();
+    const embedPanelOpen = infoState.embedMode
+        && (!mobileDock || !infoState.mobileDockCollapsed);
+    const panelOpen = infoState.embedMode ? embedPanelOpen : infoState.open;
+    elImportantInfoPanel.classList.toggle('hidden', !panelOpen);
+    elImportantInfoToggle.setAttribute('aria-expanded', panelOpen ? 'true' : 'false');
+    if (elImportantInfoChevron) {
+        if (infoState.embedMode && mobileDock) {
+            elImportantInfoChevron.textContent = infoState.mobileDockCollapsed ? '▲' : '▼';
+        } else if (infoState.embedMode) {
+            elImportantInfoChevron.textContent = '';
+        } else {
+            elImportantInfoChevron.textContent = panelOpen ? '▴' : '▾';
+        }
     }
-
-    if (infoState.error) {
-        elImportantInfoContent.innerHTML = `
-            <div class="important-info-status">
-                <p>${infoState.error}</p>
-                <button type="button" class="important-info-retry-btn">Reintentar</button>
-            </div>
-        `;
-        const retryBtn = elImportantInfoContent.querySelector('.important-info-retry-btn');
-        retryBtn?.addEventListener('click', () => {
-            state.importantInfo.loaded = false;
-            state.importantInfo.error = '';
-            fetchImportantInfoComments();
-        });
+    if (!panelOpen) {
+        scheduleImportantInfoDockPaddingSync();
         return;
     }
 
     if (!infoState.comments.length) {
-        elImportantInfoContent.innerHTML = `
-            <div class="important-info-status">
-                <p>Por ahora no hay novedades en esta sección.</p>
-            </div>
-        `;
+        elImportantInfoContent.innerHTML = '';
+        scheduleImportantInfoDockPaddingSync();
         return;
     }
 
@@ -972,12 +1056,29 @@ function renderImportantInfoPanel() {
         const commentId = String(item?.id || '').trim();
         const dateText = formatCommentDate(item?.creadoEn);
 
-        const inmuebleLink = document.createElement('button');
-        inmuebleLink.type = 'button';
+        const goToInmueble = () => scrollToPropertyCardByCode(commentId);
+
+        const inmuebleLink = document.createElement('span');
         inmuebleLink.className = 'important-info-comment-link';
         inmuebleLink.textContent = `Inmueble: ${commentId || 'N/D'}`;
-        inmuebleLink.disabled = !commentId;
-        inmuebleLink.addEventListener('click', () => scrollToPropertyCardByCode(commentId));
+        if (commentId) {
+            row.classList.add('important-info-comment-item--clickable');
+            row.setAttribute('role', 'button');
+            row.setAttribute('tabindex', '0');
+            row.setAttribute(
+                'aria-label',
+                `Ir al inmueble ${commentId} en la lista`
+            );
+            row.addEventListener('click', goToInmueble);
+            row.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    goToInmueble();
+                }
+            });
+        } else {
+            inmuebleLink.classList.add('important-info-comment-link--muted');
+        }
 
         meta.appendChild(inmuebleLink);
         if (dateText) {
@@ -993,38 +1094,98 @@ function renderImportantInfoPanel() {
     });
 
     elImportantInfoContent.appendChild(list);
+    scheduleImportantInfoDockPaddingSync();
+}
+
+/** Panel lateral solo cuando ya hay datos y existe al menos un comentario (sin estado de carga visible). */
+function shouldShowImportantInfoSidebar() {
+    const info = state.importantInfo;
+    if (!info.loaded) return false;
+    return Array.isArray(info.comments) && info.comments.length > 0;
 }
 
 function renderImportantInfoVisibility() {
-    if (!elImportantInfoSection) return;
-    const show = state.activeTab === 'aprobadas';
-    elImportantInfoSection.classList.toggle('hidden', !show);
-    if (!show && elImportantInfoPanel && elImportantInfoToggle) {
-        elImportantInfoPanel.classList.add('hidden');
-        elImportantInfoToggle.setAttribute('aria-expanded', 'false');
-        if (elImportantInfoChevron) elImportantInfoChevron.textContent = '▾';
-    } else {
-        renderImportantInfoPanel();
+    const isAprobadas = state.activeTab === 'aprobadas';
+
+    if (!isAprobadas) {
+        if (elPropertyMainWrap) {
+            elPropertyMainWrap.classList.remove('property-main-wrap--aprobadas-split');
+        }
+        if (elImportantInfoSection) {
+            elImportantInfoSection.classList.add('hidden');
+            elImportantInfoSection.classList.remove('important-info--embed');
+            elImportantInfoSection.classList.remove('important-info--mobile-dock-collapsed');
+        }
+        state.importantInfo.embedMode = false;
+        state.importantInfo.open = false;
+        state.importantInfo.mobileDockCollapsed = false;
+        if (elImportantInfoPanel && elImportantInfoToggle) {
+            elImportantInfoPanel.classList.add('hidden');
+            elImportantInfoToggle.setAttribute('aria-expanded', 'false');
+            if (elImportantInfoChevron) elImportantInfoChevron.textContent = '▾';
+        }
+        syncImportantInfoMobileDockPadding();
+        return;
     }
+
+    if (!state.importantInfo.loaded && !state.importantInfo.loading) {
+        void fetchImportantInfoComments();
+    }
+
+    const showSidebar = shouldShowImportantInfoSidebar();
+
+    if (elPropertyMainWrap) {
+        elPropertyMainWrap.classList.toggle('property-main-wrap--aprobadas-split', showSidebar);
+    }
+
+    if (!elImportantInfoSection) return;
+
+    if (!showSidebar) {
+        elImportantInfoSection.classList.add('hidden');
+        elImportantInfoSection.classList.remove('important-info--embed');
+        elImportantInfoSection.classList.remove('important-info--mobile-dock-collapsed');
+        state.importantInfo.embedMode = false;
+        state.importantInfo.open = false;
+        state.importantInfo.mobileDockCollapsed = false;
+        if (elImportantInfoPanel && elImportantInfoToggle) {
+            elImportantInfoPanel.classList.add('hidden');
+            elImportantInfoToggle.setAttribute('aria-expanded', 'false');
+            if (elImportantInfoChevron) elImportantInfoChevron.textContent = '▾';
+        }
+        syncImportantInfoMobileDockPadding();
+        return;
+    }
+
+    elImportantInfoSection.classList.remove('hidden');
+    elImportantInfoSection.classList.add('important-info--embed');
+    state.importantInfo.embedMode = true;
+    state.importantInfo.open = false;
+    renderImportantInfoPanel();
+    elImportantInfoSection.classList.toggle(
+        'important-info--mobile-dock-collapsed',
+        isImportantInfoMobileDockViewport() && state.importantInfo.mobileDockCollapsed
+    );
+    scheduleImportantInfoDockPaddingSync();
 }
 
 async function fetchImportantInfoComments() {
     if (state.importantInfo.loading) return;
     state.importantInfo.loading = true;
     state.importantInfo.error = '';
-    renderImportantInfoPanel();
 
     try {
         const data = await api.getComentarios(state.token);
         const comments = Array.isArray(data.comentarios) ? data.comentarios : [];
         state.importantInfo.comments = comments;
-        state.importantInfo.loaded = true;
+        state.importantInfo.error = '';
     } catch (err) {
         console.error('Error loading comentarios:', err);
-        state.importantInfo.error = 'No fue posible cargar la información importante.';
+        state.importantInfo.comments = [];
+        state.importantInfo.error = '';
     } finally {
         state.importantInfo.loading = false;
-        renderImportantInfoPanel();
+        state.importantInfo.loaded = true;
+        renderImportantInfoVisibility();
     }
 }
 
@@ -1084,6 +1245,7 @@ function renderCurrentTab() {
 
     if (filtered.length === 0) {
         showEmptyState(tab);
+        scheduleImportantInfoDockPaddingSync();
         return;
     }
 
@@ -1231,6 +1393,7 @@ function renderCurrentTab() {
     });
 
     elPropertyList.appendChild(fragment);
+    scheduleImportantInfoDockPaddingSync();
 }
 
 // ============================================================
@@ -2334,6 +2497,12 @@ elHistoricoNext.addEventListener('click', () => {
 if (elImportantInfoToggle) {
     elImportantInfoToggle.addEventListener('click', async () => {
         if (state.activeTab !== 'aprobadas') return;
+        if (state.importantInfo.embedMode && isImportantInfoMobileDockViewport()) {
+            state.importantInfo.mobileDockCollapsed = !state.importantInfo.mobileDockCollapsed;
+            renderImportantInfoVisibility();
+            return;
+        }
+        if (state.importantInfo.embedMode) return;
         state.importantInfo.open = !state.importantInfo.open;
         renderImportantInfoPanel();
 
@@ -2453,3 +2622,5 @@ async function init() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+window.addEventListener('resize', scheduleImportantInfoDockPaddingSync);
+window.addEventListener('orientationchange', scheduleImportantInfoDockPaddingSync);

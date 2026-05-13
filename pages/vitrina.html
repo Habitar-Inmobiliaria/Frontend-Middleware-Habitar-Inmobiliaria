@@ -10,7 +10,7 @@
     <link rel="shortcut icon" type="image/png" href="../assets/images/habitar-logo-icon.png">
     <link rel="apple-touch-icon" href="../assets/images/habitar-logo-icon.png">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="../css/vitrina/vitrina.css?cb=1002">
+    <link rel="stylesheet" href="../css/vitrina/vitrina.css?cb=1006">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -41,15 +41,6 @@
                             <span class="sidebar-buscador-text">¿No te convencen las opciones? </span><span class="sidebar-buscador-highlight">Visita nuestro buscador de inmuebles.</span>
                         </a>
                     </div>
-                    <section id="important-info-section" class="important-info hidden" aria-live="polite">
-                        <button id="important-info-toggle" type="button" class="important-info-toggle" aria-expanded="false" aria-controls="important-info-panel">
-                            Información Importante
-                            <span class="important-info-chevron" aria-hidden="true">▾</span>
-                        </button>
-                        <div id="important-info-panel" class="important-info-panel hidden">
-                            <div id="important-info-content" class="important-info-content"></div>
-                        </div>
-                    </section>
                 </aside>
             </div>
             <!-- Tab Navigation (full width below) -->
@@ -76,7 +67,8 @@
             </nav>
         </header>
 
-        <!-- Main Content: Properties (full width grid) -->
+        <!-- Main: lista de inmuebles + información importante (split solo en pestaña «Me interesa») -->
+        <div id="property-main-wrap" class="property-main-wrap">
         <div id="property-list" class="property-scroll-container">
             <div id="historico-loading" class="historico-loading hidden">
                 <div class="spinner"></div>
@@ -119,6 +111,16 @@
                 <h2 id="empty-title">Sin propiedades</h2>
                 <p id="empty-desc">No hay propiedades en esta sección.</p>
             </div>
+        </div>
+        <section id="important-info-section" class="important-info hidden" aria-live="polite">
+            <button id="important-info-toggle" type="button" class="important-info-toggle" aria-expanded="false" aria-controls="important-info-panel">
+                Información Importante
+                <span class="important-info-chevron" aria-hidden="true">▾</span>
+            </button>
+            <div id="important-info-panel" class="important-info-panel hidden">
+                <div id="important-info-content" class="important-info-content"></div>
+            </div>
+        </section>
         </div>
         <div id="historico-pagination" class="historico-pagination hidden">
             <button id="historico-prev" type="button" class="hist-page-btn">Anterior</button>
@@ -167,7 +169,7 @@
 
     <script src="../js/shared/api-error-handler.js" defer></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
-    <script src="../js/vitrina/vitrina.js?v=12" defer></script>
+    <script src="../js/vitrina/vitrina.js?v=17" defer></script>
 </body>
 
 </html>

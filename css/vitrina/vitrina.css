@@ -159,11 +159,32 @@ body::before {
     font-size: 1.1rem;
 }
 
-/* Property Scroll Container — 3-column grid on desktop */
+/* Property Scroll Container — 3-column grid on desktop (2 cols en split «Me interesa») */
 .property-scroll-container {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 24px;
+}
+
+/* Contenedor lista + panel información importante (split solo con clase JS en «Me interesa») */
+.property-main-wrap {
+    display: block;
+}
+
+.property-main-wrap--aprobadas-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);
+    gap: 24px;
+    align-items: start;
+}
+
+.property-main-wrap--aprobadas-split .property-scroll-container {
+    grid-template-columns: repeat(2, 1fr);
+    min-width: 0;
+}
+
+.property-main-wrap--aprobadas-split .important-info {
+    min-width: 0;
 }
 
 /* Sidebar: compact inline in header top row */
@@ -379,6 +400,26 @@ body::before {
     display: block;
 }
 
+.important-info-comment-item--clickable {
+    cursor: pointer;
+    border-radius: 14px;
+    outline: none;
+    transition: box-shadow 0.2s ease;
+}
+
+.important-info-comment-item--clickable:focus-visible {
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.45);
+}
+
+.important-info-comment-item--clickable:hover .important-info-bubble {
+    border-color: #cbd5e1;
+}
+
+.important-info--embed .important-info-comment-item--clickable:hover .important-info-bubble {
+    border-color: #93c5fd;
+    box-shadow: 0 2px 10px rgba(37, 99, 235, 0.12);
+}
+
 .important-info-bubble {
     background: #F9FAFB;
     border: 1px solid var(--border-color);
@@ -409,18 +450,101 @@ body::before {
     font-weight: 700;
     padding: 0;
     margin: 0;
-    cursor: pointer;
+    cursor: inherit;
     text-decoration: underline;
 }
 
-.important-info-comment-link:disabled {
+.important-info-comment-item--clickable .important-info-comment-link {
+    cursor: pointer;
+}
+
+.important-info-comment-link--muted {
     color: var(--text-secondary);
-    cursor: default;
+    font-weight: 600;
     text-decoration: none;
+    cursor: default;
+}
+
+/* Panel fijo al lado del grid (pestaña «Me interesa»): siempre abierto, estilo tarjeta */
+.important-info--embed {
+    margin-top: 0;
+    position: sticky;
+    top: 12px;
+    align-self: start;
+    background: var(--bg-card);
+    border-radius: 14px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+}
+
+.important-info--embed .important-info-toggle {
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    padding: 14px 16px;
+    font-size: 0.9rem;
+    letter-spacing: 0.02em;
+    border-bottom: 1px solid var(--border-color);
+}
+
+@media (min-width: 901px) {
+    .important-info--embed .important-info-toggle {
+        cursor: default;
+        pointer-events: none;
+    }
+
+    .important-info--embed .important-info-chevron {
+        display: none;
+    }
+}
+
+.important-info--embed .important-info-panel {
+    position: static;
+    width: 100%;
+    max-height: min(72vh, 720px);
+    margin-top: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    overflow-y: auto;
+}
+
+.important-info--embed .important-info-content {
+    padding: 14px 16px 16px;
+}
+
+.important-info--embed .important-info-bubble {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+@keyframes property-card-spotlight {
+    0%,
+    100% {
+        box-shadow: var(--shadow-card);
+        border-color: var(--border-color);
+    }
+    35%,
+    65% {
+        box-shadow:
+            0 0 0 4px rgba(59, 130, 246, 0.38),
+            0 12px 28px rgba(37, 99, 235, 0.2);
+        border-color: #3b82f6;
+    }
+    50% {
+        box-shadow:
+            0 0 0 7px rgba(59, 130, 246, 0.18),
+            0 16px 36px rgba(37, 99, 235, 0.25);
+        border-color: #2563eb;
+    }
 }
 
 .property-card-highlight {
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35), var(--shadow-card);
+    animation: property-card-spotlight 1.15s ease-in-out 2;
+    position: relative;
+    z-index: 2;
 }
 
 /* Property Card Design */
@@ -808,7 +932,7 @@ body::before {
         width: 100%;
     }
 
-    .important-info-panel {
+    .important-info:not(.important-info--embed) .important-info-panel {
         position: static;
         width: 100%;
         max-height: none;
@@ -823,6 +947,85 @@ body::before {
     .property-scroll-container {
         grid-template-columns: 1fr;
         gap: 24px;
+    }
+
+    .property-main-wrap--aprobadas-split {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .property-main-wrap--aprobadas-split .property-scroll-container {
+        grid-template-columns: 1fr;
+    }
+
+    .property-main-wrap--aprobadas-split > #property-list.property-scroll-container {
+        padding-bottom: var(--vitrina-important-dock-pad, 88px);
+        box-sizing: border-box;
+    }
+
+    /*
+     * Dock móvil «Me interesa»: fixed al viewport (fuera del flujo del grid).
+     * column-reverse: la barra (toggle) queda junto al borde inferior del móvil.
+     * Alturas acotadas: evita el panel vacío gigante por flex-grow.
+     */
+    .property-main-wrap--aprobadas-split > #important-info-section.important-info--embed {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: auto;
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        z-index: 55;
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -8px 32px rgba(15, 23, 42, 0.16);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        display: flex;
+        flex-direction: column-reverse;
+        align-items: stretch;
+        height: auto;
+        min-height: 0;
+        max-height: min(52vh, 440px);
+        background: var(--bg-card);
+        overflow: hidden;
+    }
+
+    .property-main-wrap--aprobadas-split
+        > #important-info-section.important-info--embed.important-info--mobile-dock-collapsed {
+        max-height: none;
+    }
+
+    .property-main-wrap--aprobadas-split .important-info--embed .important-info-toggle {
+        pointer-events: auto;
+        cursor: pointer;
+        flex-shrink: 0;
+        border-bottom: none;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .property-main-wrap--aprobadas-split .important-info--embed .important-info-panel {
+        flex: 0 1 auto;
+        min-height: 0;
+        max-height: min(40vh, 300px) !important;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        position: relative;
+        margin: 0;
+    }
+
+    .property-main-wrap--aprobadas-split
+        .important-info--embed.important-info--mobile-dock-collapsed
+        .important-info-panel {
+        max-height: 0 !important;
+        min-height: 0 !important;
+        flex: 0 0 auto;
+        overflow: hidden;
+        opacity: 0;
+        padding: 0;
+        margin: 0;
+        border: none;
+        pointer-events: none;
     }
 
     /* Show title and restore vertical card layout on tablet */
@@ -910,6 +1113,7 @@ body::before {
     body,
     .app-layout,
     .content-header,
+    .property-main-wrap,
     .property-scroll-container,
     .sidebar {
         max-width: 100%;
