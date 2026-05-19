@@ -1,7 +1,9 @@
 // ============================================================
 // Constants & Config
 // ============================================================
+
 const API_BASE     = 'https://backend-middleware-habitar-inmobiliaria-production.up.railway.app/api/v1/vitrina';
+
 const DEFAULT_TOKEN = '197928127379';
 
 // Header needed to bypass localtunnel's HTML verification page
@@ -51,6 +53,72 @@ const VITRINA_SESSION_PREFIX = 'vitrina_last_ok_';
 const VITRINA_VISITA_SESSION_PREFIX = 'vitrina_notificar_visita_';
 const VITRINA_304_MAX_DEPTH = 3;
 const N8N_SCRAPE_INMUEBLE_URL = 'https://n8n-automatizations.habitarinmobiliaria.co/webhook/scrape-inmueble';
+const PRIVADOS_API = 'https://backend-middleware-habitar-inmobiliaria-production.up.railway.app/api/v1/inmuebles-privados';
+
+/** IDs enriquecidos vía Wasi/n8n (fuera del GET vitrina/{token}). */
+const externallyRecoveredIds = new Set();
+
+/** Campos de texto de dirección/ubicación (el mapa usa latitude/longitude). */
+const LOCATION_TEXT_DETAIL_KEYS = [
+    'ubicacion', 'zona', 'direccion', 'ciudad', 'location', 'address',
+    'barrio', 'barrio_nombre', 'neighborhood'
+];
+
+function markExternallyRecoveredReference(ref) {
+    const id = String(ref || '').trim();
+    if (id) externallyRecoveredIds.add(id);
+}
+
+function wasExternallyRecoveredByReferencia(ref) {
+    const id = String(ref || '').trim();
+    if (!id) return false;
+    if (externallyRecoveredIds.has(id)) return true;
+    const wasiKey = `wasi-ref-${id}`;
+    const n8nKey = `n8n-scrape-${id}`;
+    if (unavailableProbeCache.has(wasiKey) && unavailableProbeCache.get(wasiKey)) return true;
+    if (n8nScrapeCache.has(n8nKey) && n8nScrapeCache.get(n8nKey)) return true;
+    return false;
+}
+
+function getPropertyReferenceId(prop) {
+    if (!prop) return '';
+    return String(
+        extractPropertyIdFromUrl(prop.url || prop.urlReferencia || prop.urlInmueble || '')
+        || prop.codigoNumerico
+        || prop.id
+        || ''
+    ).trim();
+}
+
+function shouldRestrictPropertyLocation(prop) {
+    if (!prop || typeof prop !== 'object') return false;
+    if (prop._locationRestricted || prop._externalDataSource || prop._fromHistorico) return true;
+    return wasExternallyRecoveredByReferencia(getPropertyReferenceId(prop));
+}
+
+function shouldRestrictDetailLocation(detail, listProp = null) {
+    if (detail?._locationRestricted || detail?._externalDataSource || detail?._fromHistorico) return true;
+    if (listProp && shouldRestrictPropertyLocation(listProp)) return true;
+    if (detail && wasExternallyRecoveredByReferencia(getPropertyReferenceId(detail))) return true;
+    return false;
+}
+
+/** Oculta campos de dirección; conserva coordenadas para el mapa. */
+function sanitizeDetailLocationFields(detail) {
+    if (!detail || typeof detail !== 'object') return detail;
+    const out = { ...detail };
+    LOCATION_TEXT_DETAIL_KEYS.forEach((key) => {
+        if (key in out) out[key] = '';
+    });
+    out._locationRestricted = true;
+    return out;
+}
+
+function prepareDetailForDisplay(detail, listProp = null) {
+    if (!detail) return detail;
+    if (!shouldRestrictDetailLocation(detail, listProp)) return detail;
+    return sanitizeDetailLocationFields(detail);
+}
 
 /**
  * Extract the numeric wasi ID from urlReferencia.
@@ -170,9 +238,11 @@ function applyWasiProbeDataToProperty(prop, data) {
 function applyLocationRestrictionToProperty(prop) {
     if (!prop) return;
     prop._locationRestricted = true;
+    prop._externalDataSource = true;
     prop.ubicacion = '';
     prop.zona = '';
     prop.direccion = '';
+    markExternallyRecoveredReference(getPropertyReferenceId(prop));
 }
 
 function cacheRecoveredDetail(prop, data, referenciaId = '', { locationRestricted = false } = {}) {
@@ -227,7 +297,8 @@ function cacheRecoveredDetail(prop, data, referenciaId = '', { locationRestricte
     if (detailUrl) keys.add(detailUrl);
     if (detailId) keys.add(detailId);
 
-    keys.forEach((k) => detailCache.set(String(k), mergedDetail));
+    const toCache = isLocationRestricted ? sanitizeDetailLocationFields(mergedDetail) : mergedDetail;
+    keys.forEach((k) => detailCache.set(String(k), toCache));
 }
 
 function setUnavailableVerifyingIndicator(card, show) {
@@ -279,6 +350,7 @@ async function tryRecoverUnavailableProperty(prop, displayPropertyId, cardEl) {
 
         const probeData = await api.getWasiPropertyByReferencia(ref);
         if (probeData) {
+            markExternallyRecoveredReference(ref);
             applyLocationRestrictionToProperty(prop);
             applyWasiProbeDataToProperty(prop, probeData);
             cacheRecoveredDetail(prop, probeData, ref, { locationRestricted: true });
@@ -292,6 +364,7 @@ async function tryRecoverUnavailableProperty(prop, displayPropertyId, cardEl) {
 
         const scrapeData = await api.scrapeInmuebleByReferencia(ref);
         if (!scrapeData) return;
+        markExternallyRecoveredReference(ref);
         applyLocationRestrictionToProperty(prop);
         applyWasiProbeDataToProperty(prop, scrapeData);
         cacheRecoveredDetail(prop, scrapeData, ref, { locationRestricted: true });
@@ -502,7 +575,6 @@ const api = {
                 if (!res.ok) await handleApiError(res);
                 data = await res.json();
             } else {
-                const PRIVADOS_API = 'https://backend-middleware-habitar-inmobiliaria-production.up.railway.app/api/v1/inmuebles-privados';
                 const res = await fetch(`${PRIVADOS_API}/${wasiId}`, { signal });
                 if (!res.ok) await handleApiError(res);
                 data = await res.json();
@@ -511,6 +583,9 @@ const api = {
                 if (data.precio && !data.precioFormateado) {
                     data.precioFormateado = `$${Number(data.precio).toLocaleString('es-CO')}`;
                 }
+                data._externalDataSource = true;
+                data._locationRestricted = true;
+                markExternallyRecoveredReference(wasiId);
             }
 
             detailCache.set(cacheKey, data);
@@ -1260,7 +1335,7 @@ function renderCurrentTab() {
         const descriptionEl = card.querySelector('.property-description');
         const actionBar = card.querySelector('.action-bar');
         const cleanTitle = normalizeDisplayText(prop.titulo);
-        const cleanLocation = prop._locationRestricted ? '' : normalizeDisplayText(prop.ubicacion);
+        const cleanLocation = shouldRestrictPropertyLocation(prop) ? '' : normalizeDisplayText(prop.ubicacion);
         const cleanDescription = normalizeDisplayText(prop.descripcionCorta);
 
         card.dataset.id = prop.id;
@@ -1320,7 +1395,7 @@ function renderCurrentTab() {
             if (displayPropertyId) void tryRecoverUnavailableProperty(prop, displayPropertyId, card);
         } else {
             titleEl.textContent = cleanTitle;
-            if (!prop._locationRestricted && cleanLocation) {
+            if (!shouldRestrictPropertyLocation(prop) && cleanLocation) {
                 locationEl.textContent = `📍 ${cleanLocation}`;
                 locationEl.classList.remove('hidden');
             } else {
@@ -1501,7 +1576,10 @@ async function loadHistoricoTab() {
                     precioFormateado: pDetail.precioFormateado || (pDetail.precio ? `$${Number(pDetail.precio).toLocaleString('es-CO')}` : ''),
                     urlReferencia: pDetail.urlReferencia || pDetail.url || '',
                     titulo: pDetail.titulo || '',
-                    _historyMeta: item
+                    _historyMeta: item,
+                    _fromHistorico: true,
+                    _locationRestricted: true,
+                    _externalDataSource: true
                 };
             } catch (err) {
                 console.warn('Could not fetch detail for historico item', item._propertyId || item.codigoNumerico, err);
@@ -1633,29 +1711,32 @@ function openPropertyDetail(propOrId) {
 
     const cachedDetail = findCachedDetailForProperty(listProp, propOrId);
     if (cachedDetail) {
-        elModalBody.innerHTML = buildDetailHTML(cachedDetail, listProp);
+        const prepared = prepareDetailForDisplay(cachedDetail, listProp);
+        elModalBody.innerHTML = buildDetailHTML(prepared, listProp);
         initGallery();
         initDetailVideoSection();
-        initModalDetailFooter(cachedDetail, listProp);
+        initModalDetailFooter(prepared, listProp);
         initDetailMapSection();
         return;
     }
 
     api.getPropertyDetail(state.token, propertyId, { cancelPrevious: true })
         .then(d => {
-            elModalBody.innerHTML = buildDetailHTML(d, listProp);
+            const prepared = prepareDetailForDisplay(d, listProp);
+            elModalBody.innerHTML = buildDetailHTML(prepared, listProp);
             initGallery();
             initDetailVideoSection();
-            initModalDetailFooter(d, listProp);
+            initModalDetailFooter(prepared, listProp);
             initDetailMapSection();
         })
         .catch(() => {
             const lateCacheDetail = findCachedDetailForProperty(listProp, propOrId);
             if (lateCacheDetail) {
-                elModalBody.innerHTML = buildDetailHTML(lateCacheDetail, listProp);
+                const prepared = prepareDetailForDisplay(lateCacheDetail, listProp);
+                elModalBody.innerHTML = buildDetailHTML(prepared, listProp);
                 initGallery();
                 initDetailVideoSection();
-                initModalDetailFooter(lateCacheDetail, listProp);
+                initModalDetailFooter(prepared, listProp);
                 initDetailMapSection();
                 return;
             }
@@ -2139,6 +2220,8 @@ function preloadGalleryImages(images) {
 }
 
 function buildDetailHTML(d, listProp = null) {
+    d = prepareDetailForDisplay(d, listProp);
+
     const imgs = (d.galeriasImagenes && d.galeriasImagenes.length)
         ? d.galeriasImagenes
         : ['https://via.placeholder.com/800x500?text=Sin+imagen'];
