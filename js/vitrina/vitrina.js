@@ -1,9 +1,13 @@
 // ============================================================
 // Constants & Config
 // ============================================================
+const IS_LOCAL_DEV = window.location.hostname === 'localhost'
+    || window.location.hostname === '127.0.0.1';
+const BACKEND_ORIGIN = IS_LOCAL_DEV
+    ? 'http://localhost:8080'
+    : 'https://backend-middleware-habitar-inmobiliaria-production.up.railway.app';
 
-const API_BASE     = 'https://backend-middleware-habitar-inmobiliaria-production.up.railway.app/api/v1/vitrina';
-
+const API_BASE = `${BACKEND_ORIGIN}/api/v1/vitrina`;
 const DEFAULT_TOKEN = '197928127379';
 
 // Header needed to bypass localtunnel's HTML verification page
@@ -53,7 +57,7 @@ const VITRINA_SESSION_PREFIX = 'vitrina_last_ok_';
 const VITRINA_VISITA_SESSION_PREFIX = 'vitrina_notificar_visita_';
 const VITRINA_304_MAX_DEPTH = 3;
 const N8N_SCRAPE_INMUEBLE_URL = 'https://n8n-automatizations.habitarinmobiliaria.co/webhook/scrape-inmueble';
-const PRIVADOS_API = 'https://backend-middleware-habitar-inmobiliaria-production.up.railway.app/api/v1/inmuebles-privados';
+const PRIVADOS_API = `${BACKEND_ORIGIN}/api/v1/inmuebles-privados`;
 
 /** IDs enriquecidos vía Wasi/n8n (fuera del GET vitrina/{token}). */
 const externallyRecoveredIds = new Set();
@@ -76,7 +80,10 @@ function wasExternallyRecoveredByReferencia(ref) {
     const wasiKey = `wasi-ref-${id}`;
     const n8nKey = `n8n-scrape-${id}`;
     if (unavailableProbeCache.has(wasiKey) && unavailableProbeCache.get(wasiKey)) return true;
-    if (n8nScrapeCache.has(n8nKey) && n8nScrapeCache.get(n8nKey)) return true;
+    if (n8nScrapeCache.has(n8nKey)) {
+        const { data } = unwrapN8nScrapeCacheEntry(n8nScrapeCache.get(n8nKey));
+        if (data) return true;
+    }
     return false;
 }
 
@@ -201,6 +208,93 @@ function normalizeWasiProbePayload(payload) {
     // Si ya viene objeto plano de inmueble
     if (typeof payload === 'object' && !Array.isArray(payload)) return payload;
     return null;
+}
+
+/** Tras recuperación: al menos título, descripción, imagen o precio útil (evita DTO lleno de null). */
+function isUsefulRecoveredPropertyPayload(data) {
+    if (!data || typeof data !== 'object') return false;
+    const title = normalizeDisplayText(data.titulo || data.title || data.nombre);
+    const description = normalizeDisplayText(
+        data.descripcionCorta || data.observaciones || data.descripcion || data.description
+    );
+    const image = normalizeDisplayText(
+        data.imagenUrl
+        || data.imagen_principal
+        || data.imagen
+        || data.foto
+        || (Array.isArray(data.galeriasImagenes) ? data.galeriasImagenes[0] : '')
+        || (Array.isArray(data.imagenes) ? data.imagenes[0] : '')
+    );
+    const price = normalizeDisplayText(data.precioFormateado || data.precio_formateado || data.precio);
+    return Boolean(title || description || image || price);
+}
+
+/**
+ * Contrato webhook scrape-inmueble (n8n):
+ * - HTTP 200: { valido: true, datos: { ... } }
+ * - HTTP 422: { valido: false, motivo, mensaje, idInmueble, ... }
+ * Legacy: objeto plano en raíz (solo si tiene campos útiles).
+ */
+function parseN8nScrapeResponseBody(body) {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        return { data: null, rejection: null };
+    }
+
+    if ('valido' in body) {
+        if (body.valido !== true) {
+            return {
+                data: null,
+                rejection: {
+                    motivo: String(body.motivo || 'INMUEBLE_NO_ENCONTRADO').trim(),
+                    mensaje: String(body.mensaje || '').trim()
+                }
+            };
+        }
+
+        const datos = body.datos;
+        if (!datos || typeof datos !== 'object' || Array.isArray(datos)) {
+            return {
+                data: null,
+                rejection: {
+                    motivo: String(body.motivo || 'DATOS_INSUFICIENTES').trim(),
+                    mensaje: String(body.mensaje || '').trim()
+                }
+            };
+        }
+
+        const normalized = normalizeWasiProbePayload(datos);
+        if (!isUsefulRecoveredPropertyPayload(normalized)) {
+            return {
+                data: null,
+                rejection: {
+                    motivo: 'DATOS_INSUFICIENTES',
+                    mensaje: String(body.mensaje || '').trim()
+                }
+            };
+        }
+        return { data: normalized, rejection: null };
+    }
+
+    const legacy = normalizeWasiProbePayload(body);
+    if (isUsefulRecoveredPropertyPayload(legacy)) {
+        return { data: legacy, rejection: null };
+    }
+    return { data: null, rejection: null };
+}
+
+/** Valor en n8nScrapeCache: null | datos normalizados | { data, rejection } */
+function unwrapN8nScrapeCacheEntry(entry) {
+    if (!entry) return { data: null, rejection: null };
+    if (typeof entry === 'object' && entry !== null && 'data' in entry) {
+        return {
+            data: entry.data || null,
+            rejection: entry.rejection || null
+        };
+    }
+    if (isUsefulRecoveredPropertyPayload(entry)) {
+        return { data: entry, rejection: null };
+    }
+    return { data: null, rejection: null };
 }
 
 function applyWasiProbeDataToProperty(prop, data) {
@@ -362,7 +456,8 @@ async function tryRecoverUnavailableProperty(prop, displayPropertyId, cardEl) {
             })) return;
         }
 
-        const scrapeData = await api.scrapeInmuebleByReferencia(ref);
+        const scrapeResult = await api.scrapeInmuebleByReferencia(ref);
+        const scrapeData = scrapeResult?.data || null;
         if (!scrapeData) return;
         markExternallyRecoveredReference(ref);
         applyLocationRestrictionToProperty(prop);
@@ -433,7 +528,7 @@ async function vitrinaFetchOnce(token, { cacheBust = false, allowHttpCache = tru
         return vitrinaFetchOnce(token, { cacheBust: true, allowHttpCache: false }, depth304 + 1);
     }
 
-    if (res.status === 503) {
+    if (res.status === 503 || res.status === 502) {
         const data = await readResponseJsonOrEmpty(res);
         return { outcome: 'partial', data };
     }
@@ -457,7 +552,7 @@ const api = {
     },
 
     async getHistorico(token) {
-        const url = `https://backend-middleware-habitar-inmobiliaria-production.up.railway.app/api/v1/historico-inmuebles/por-cliente/${token}`;
+        const url = `${BACKEND_ORIGIN}/api/v1/historico-inmuebles/por-cliente/${token}`;
         const res = await fetch(url, { headers: TUNNEL_HEADERS });
         if (!res.ok) await handleApiError(res);
         return res.json();
@@ -502,7 +597,7 @@ const api = {
 
         const cacheKey = `n8n-scrape-${ref}`;
         if (n8nScrapeCache.has(cacheKey)) {
-            return n8nScrapeCache.get(cacheKey);
+            return unwrapN8nScrapeCacheEntry(n8nScrapeCache.get(cacheKey));
         }
         if (n8nScrapeInFlight.has(cacheKey)) {
             return n8nScrapeInFlight.get(cacheKey);
@@ -515,17 +610,30 @@ const api = {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id: ref })
                 });
-                if (!res.ok) {
-                    n8nScrapeCache.set(cacheKey, null);
-                    return null;
+
+                let body = {};
+                try {
+                    const text = await res.text();
+                    if (text) body = JSON.parse(text);
+                } catch {
+                    body = {};
                 }
-                const raw = await res.json();
-                const normalized = normalizeWasiProbePayload(raw);
-                n8nScrapeCache.set(cacheKey, normalized || null);
-                return normalized || null;
+
+                // 200 y 422 son respuestas de negocio esperadas; solo parsear JSON.
+                if (res.status === 200 || res.status === 422) {
+                    const parsed = parseN8nScrapeResponseBody(body);
+                    const entry = parsed.data
+                        ? parsed.data
+                        : { data: null, rejection: parsed.rejection };
+                    n8nScrapeCache.set(cacheKey, entry);
+                    return parsed;
+                }
+
+                n8nScrapeCache.set(cacheKey, { data: null, rejection: null });
+                return { data: null, rejection: null };
             } catch {
-                n8nScrapeCache.set(cacheKey, null);
-                return null;
+                n8nScrapeCache.set(cacheKey, { data: null, rejection: null });
+                return { data: null, rejection: null };
             } finally {
                 n8nScrapeInFlight.delete(cacheKey);
             }
@@ -2632,12 +2740,18 @@ async function init() {
         const input = String(raw || '').trim();
         if (!input) return '';
 
-        // Soporta Base64 estándar y Base64 URL-safe.
+        if (/^\d{5,}$/.test(input)) return input;
+
+        const looksBase64 = /^[A-Za-z0-9+/=_-]+$/.test(input) && /[A-Za-z+/=_-]/.test(input);
+        if (!looksBase64) return input;
+
         const normalized = input.replace(/-/g, '+').replace(/_/g, '/');
         const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
 
         try {
-            return atob(padded).trim();
+            const decoded = atob(padded).trim();
+            if (!decoded || /[\x00-\x08\x0E-\x1F]/.test(decoded)) return input;
+            return decoded;
         } catch {
             return input;
         }
@@ -2668,7 +2782,11 @@ async function init() {
     const queryTokenDecoded = sanitizeToken(decodeToken(cleanQueryTokenRaw));
     state.token = pathTokenDecoded || queryTokenDecoded || DEFAULT_TOKEN;
 
-    console.log(`Vitrina token: ${state.token}`);
+    if (IS_LOCAL_DEV) {
+        console.log(`[Vitrina local] API: ${API_BASE} | token: ${state.token}`);
+    } else {
+        console.log(`Vitrina token: ${state.token}`);
+    }
 
     try {
         const data       = await fetchMostCompleteVitrinaData(state.token);
