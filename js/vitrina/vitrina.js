@@ -2407,6 +2407,8 @@ function buildDetailHTML(d, listProp = null) {
 
           ${buildPriceBlock(d)}
 
+          <!-- Inyectamos descripcionCorta, si existe. El backend sanitiza y provee el fallback -->
+          ${d.descripcionCorta ? `<p class="modal-description">${d.descripcionCorta}</p>` : ''}
 
           <div class="spec-list">${specRows2Col}</div>
         </div>
