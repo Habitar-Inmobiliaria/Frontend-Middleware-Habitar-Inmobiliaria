@@ -1680,7 +1680,7 @@ async function loadHistoricoTab() {
                     ...pDetail,
                     id: propertyId,
                     imagenUrl: (pDetail.galeriasImagenes && pDetail.galeriasImagenes.length > 0) ? pDetail.galeriasImagenes[0] : '',
-                    descripcionCorta: pDetail.observaciones || pDetail.descripcionCorta || '',
+                    descripcionCorta: pDetail.descripcion || pDetail.observaciones || pDetail.descripcionCorta || '',
                     precioFormateado: pDetail.precioFormateado || (pDetail.precio ? `$${Number(pDetail.precio).toLocaleString('es-CO')}` : ''),
                     urlReferencia: pDetail.urlReferencia || pDetail.url || '',
                     titulo: pDetail.titulo || '',
@@ -2407,15 +2407,18 @@ function buildDetailHTML(d, listProp = null) {
 
           ${buildPriceBlock(d)}
 
-          <!-- Usamos observaciones para mostrar la descripcion completa, con fallback a descripcionCorta -->
-          ${(d.observaciones || d.descripcionCorta) ? `<div class="modal-description">${d.observaciones || d.descripcionCorta}</div>` : ''}
-
           <div class="spec-list">${specRows2Col}</div>
         </div>
       </div>
 
       <!-- BOTTOM: Characteristics full-width -->
       <div class="modal-chars-row">
+        ${(d.descripcion || d.observaciones || d.descripcionCorta) ? `
+        <section class="detail-section">
+          <h3 class="detail-section-title">Descripción Adicional</h3>
+          <div class="modal-description">${d.descripcion || d.observaciones || d.descripcionCorta}</div>
+        </section>` : ''}
+
         ${(d.caracteristicasInternas && d.caracteristicasInternas.length) ? `
         <section class="detail-section">
           <h3 class="detail-section-title">Características internas</h3>

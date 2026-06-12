@@ -1357,10 +1357,16 @@ body::before {
 
 .modal-description {
     color: var(--text-secondary);
-    line-height: 1.6;
-    font-size: 1.1rem;
-    white-space: pre-line;
-    /* Handle line breaks from backend */
+    line-height: 1.5;
+    font-size: 0.88rem;
+}
+
+.modal-description p {
+    margin-bottom: 12px;
+}
+
+.modal-description p:last-child {
+    margin-bottom: 0;
 }
 
 /* ============================================================
