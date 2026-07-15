@@ -1073,7 +1073,7 @@ function isImportantInfoMobileDockViewport() {
 
 function syncImportantInfoMobileDockPadding() {
     if (!elPropertyMainWrap || !elImportantInfoSection) return;
-    const dockActive = state.activeTab === 'aprobadas'
+    const dockActive = (state.activeTab === 'aprobadas' || state.activeTab === 'visitados')
         && shouldShowImportantInfoSidebar()
         && state.importantInfo.embedMode
         && isImportantInfoMobileDockViewport();
@@ -1219,11 +1219,31 @@ function renderImportantInfoPanel() {
         return;
     }
 
+    // Helper para extraer de forma segura el estado (evita problemas de mayúsculas/minúsculas en las keys)
+    const getEstadoSeguro = (item) => {
+        const val = item.estado || item.Estado || item.ESTADO;
+        return val ? String(val).toUpperCase().trim() : null;
+    };
+
+    const filteredComments = infoState.comments.filter(item => {
+        const estado = getEstadoSeguro(item);
+        if (!estado) return true;
+        if (state.activeTab === 'aprobadas') return estado === 'APROBADO';
+        if (state.activeTab === 'visitados') return estado === 'VISITADO';
+        return false;
+    });
+
+    if (!filteredComments.length) {
+        elImportantInfoContent.innerHTML = '';
+        scheduleImportantInfoDockPaddingSync();
+        return;
+    }
+
     elImportantInfoContent.innerHTML = '';
     const list = document.createElement('div');
     list.className = 'important-info-comments-list';
 
-    infoState.comments.forEach((item) => {
+    filteredComments.forEach((item) => {
         const row = document.createElement('article');
         row.className = 'important-info-comment-item';
 
@@ -1232,6 +1252,7 @@ function renderImportantInfoPanel() {
 
         const text = document.createElement('p');
         text.className = 'important-info-comment-text';
+
         text.textContent = normalizeDisplayText(item?.comentario) || 'Comentario sin contenido';
 
         const meta = document.createElement('div');
@@ -1288,9 +1309,9 @@ function shouldShowImportantInfoSidebar() {
 }
 
 function renderImportantInfoVisibility() {
-    const isAprobadas = state.activeTab === 'aprobadas';
+    const showCommentsSection = state.activeTab === 'aprobadas' || state.activeTab === 'visitados';
 
-    if (!isAprobadas) {
+    if (!showCommentsSection) {
         if (elPropertyMainWrap) {
             elPropertyMainWrap.classList.remove('property-main-wrap--aprobadas-split');
         }
@@ -2803,6 +2824,63 @@ async function init() {
         renderAgent(state.agent);
         updateBadges();
         renderCurrentTab();
+
+        // Tutorial Modal Logic
+        const tutorialModal = document.getElementById('tutorial-modal');
+        const tutorialClose = document.getElementById('tutorial-close');
+        const tutorialNext = document.getElementById('tutorial-next');
+        
+        const tutorialStep1 = document.getElementById('tutorial-step-1');
+        const tutorialStep2 = document.getElementById('tutorial-step-2');
+        const tutorialStep3 = document.getElementById('tutorial-step-3');
+        const tutorialStep4 = document.getElementById('tutorial-step-4');
+        const tutorialStep5 = document.getElementById('tutorial-step-5');
+        const tutorialStep6 = document.getElementById('tutorial-step-6');
+        let currentStep = 1;
+        const maxSteps = 6;
+
+        const tutorialSeen = localStorage.getItem(`tutorial_seen_${state.token}`);
+
+        if (tutorialModal && tutorialClose && tutorialNext && !tutorialSeen) {
+            tutorialModal.classList.remove('hidden');
+            tutorialModal.setAttribute('aria-hidden', 'false');
+
+            const closeTutorial = () => {
+                tutorialModal.classList.add('hidden');
+                tutorialModal.setAttribute('aria-hidden', 'true');
+                localStorage.setItem(`tutorial_seen_${state.token}`, 'true');
+            };
+
+            const nextStep = () => {
+                if (currentStep === 1) {
+                    tutorialStep1.classList.add('hidden');
+                    tutorialStep2.classList.remove('hidden');
+                    currentStep++;
+                } else if (currentStep === 2) {
+                    tutorialStep2.classList.add('hidden');
+                    tutorialStep3.classList.remove('hidden');
+                    currentStep++;
+                } else if (currentStep === 3) {
+                    tutorialStep3.classList.add('hidden');
+                    tutorialStep4.classList.remove('hidden');
+                    currentStep++;
+                } else if (currentStep === 4) {
+                    tutorialStep4.classList.add('hidden');
+                    tutorialStep5.classList.remove('hidden');
+                    currentStep++;
+                } else if (currentStep === 5) {
+                    tutorialStep5.classList.add('hidden');
+                    tutorialStep6.classList.remove('hidden');
+                    tutorialNext.textContent = 'FINALIZAR';
+                    currentStep++;
+                } else {
+                    closeTutorial();
+                }
+            };
+
+            tutorialClose.addEventListener('click', closeTutorial);
+            tutorialNext.addEventListener('click', nextStep);
+        }
 
         const nombreProspecto =
             normalizeDisplayText(data?.nombreProspecto)

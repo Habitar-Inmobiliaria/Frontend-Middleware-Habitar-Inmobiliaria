@@ -2427,3 +2427,174 @@ body.lightbox-open {
         bottom: 16px;
     }
 }
+
+/* ============================================================
+   Comment Badges
+   ============================================================ */
+.comment-badge {
+    font-weight: 700;
+    margin-right: 4px;
+}
+
+.comment-badge--aprobado {
+    color: #059669; /* Verde */
+}
+
+.comment-badge--visitado {
+    color: #2563eb; /* Azul */
+}
+
+/* ============================================================
+   Tutorial Modal
+   ============================================================ */
+.tutorial-modal-content {
+    max-width: 420px;
+    padding: 40px 30px;
+    text-align: center;
+    background-color: #ffffff;
+    border-radius: 16px;
+    border: 2px solid #333;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.tutorial-close-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 36px;
+    height: 36px;
+    background-color: #ffb4b4;
+    border: 2px solid #333;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #333;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: transform 0.2s;
+}
+
+.tutorial-close-btn:hover {
+    transform: scale(1.05);
+}
+
+.tutorial-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.tutorial-logo {
+    max-width: 180px;
+    margin-bottom: 24px;
+}
+
+.tutorial-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 16px;
+    line-height: 1.4;
+}
+
+.tutorial-description {
+    font-size: 1rem;
+    color: #555;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.tutorial-step {
+    width: 100%;
+}
+
+.tutorial-fake-tab {
+    display: inline-block;
+    background-color: #e5e7eb;
+    color: #374151;
+    padding: 10px 40px;
+    border-radius: 8px;
+    border: 2px solid #333;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.tutorial-fake-tab-yellow {
+    background-color: #fde047;
+}
+
+.tutorial-fake-tab-red {
+    background-color: #ffb4b4;
+}
+
+.tutorial-fake-tab-blue {
+    background-color: #bfdbfe; /* Light blue similar to mockup */
+}
+
+.tutorial-fake-tab-white {
+    background-color: #ffffff;
+}
+
+.tutorial-fake-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 15px;
+    margin-bottom: 10px;
+}
+
+.tutorial-fake-separator {
+    font-weight: bold;
+    color: #555;
+}
+
+.tutorial-fake-btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 2px solid #333;
+    font-weight: 600;
+}
+
+.tutorial-fake-btn-red {
+    background-color: #ffb4b4;
+    color: #333;
+}
+
+.tutorial-fake-btn-yellow {
+    background-color: #fde047;
+    color: #333;
+}
+
+.tutorial-footer {
+    width: 100%;
+    margin-top: 15px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+    display: flex;
+    justify-content: center;
+}
+
+.tutorial-btn-next {
+    background-color: #bdf2bd;
+    border: 2px solid #333;
+    border-radius: 8px;
+    padding: 14px 24px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #333;
+    cursor: pointer;
+    width: 100%;
+    max-width: 240px;
+    transition: transform 0.2s, background-color 0.2s;
+    letter-spacing: 1px;
+}
+
+.tutorial-btn-next:hover {
+    background-color: #a4e4a4;
+    transform: translateY(-2px);
+}

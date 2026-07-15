@@ -143,6 +143,72 @@
         </div>
     </div>
 
+    <!-- Tutorial Modal -->
+    <div id="tutorial-modal" class="modal-overlay hidden" aria-hidden="true">
+        <div class="modal-content tutorial-modal-content" role="dialog" aria-modal="true" aria-labelledby="tutorial-title">
+            <button class="tutorial-close-btn" aria-label="Cerrar tutorial" id="tutorial-close">✕</button>
+            <div class="tutorial-body">
+                <img src="../assets/images/habitar-logo.png" alt="Habitar Inmobiliaria" class="tutorial-logo">
+                
+                <!-- Paso 1 -->
+                <div id="tutorial-step-1" class="tutorial-step">
+                    <h2 id="tutorial-title" class="tutorial-title">Bienvenido a tu visualizador de inmuebles personalizado</h2>
+                    <p class="tutorial-description">Aquí podrás encontrar los inmuebles que hemos escogido para ti en base a tus preferencias dadas.</p>
+                </div>
+
+                <!-- Paso 2 -->
+                <div id="tutorial-step-2" class="tutorial-step hidden">
+                    <p class="tutorial-description">Aquí podrás encontrar 5 opciones de visualización prestablecidas:</p>
+                    <div class="tutorial-fake-tab">Sin revisar</div>
+                    <p class="tutorial-description" style="margin-top:20px;">Analiza los últimos inmuebles escogidos para ti y que aún no les hayas echado un vistazo y danos tu aprobación o desinterés sobre este con los botones:</p>
+                    <div class="tutorial-fake-actions">
+                        <div class="tutorial-fake-btn tutorial-fake-btn-red">✕ Descartar</div>
+                        <span class="tutorial-fake-separator">o</span>
+                        <div class="tutorial-fake-btn tutorial-fake-btn-yellow">⭐ Me interesa</div>
+                    </div>
+                </div>
+
+                <!-- Paso 3 -->
+                <div id="tutorial-step-3" class="tutorial-step hidden">
+                    <p class="tutorial-description">Aquí podrás encontrar 5 opciones de visualización prestablecidas:</p>
+                    <div class="tutorial-fake-tab tutorial-fake-tab-yellow">Me interesa</div>
+                    <p class="tutorial-description" style="margin-top:20px;">Observa el histórico de inmuebles que te han llamado la atención y descarta lo que ya no te interese con el botón:</p>
+                    <div class="tutorial-fake-actions">
+                        <div class="tutorial-fake-btn tutorial-fake-btn-red">✕ Descartar</div>
+                    </div>
+                </div>
+
+                <!-- Paso 4 -->
+                <div id="tutorial-step-4" class="tutorial-step hidden">
+                    <p class="tutorial-description">Aquí podrás encontrar 5 opciones de visualización prestablecidas:</p>
+                    <div class="tutorial-fake-tab tutorial-fake-tab-red">Descartadas</div>
+                    <p class="tutorial-description" style="margin-top:20px;">Observa el histórico de inmuebles que has descartado y si algún inmueble te interesa de nuevo puedes presionar el botón:</p>
+                    <div class="tutorial-fake-actions">
+                        <div class="tutorial-fake-btn tutorial-fake-btn-yellow">⭐ Me interesa nuevamente</div>
+                    </div>
+                </div>
+
+                <!-- Paso 5 -->
+                <div id="tutorial-step-5" class="tutorial-step hidden">
+                    <p class="tutorial-description">Aquí podrás encontrar 5 opciones de visualización prestablecidas:</p>
+                    <div class="tutorial-fake-tab tutorial-fake-tab-blue">Visitados</div>
+                    <p class="tutorial-description" style="margin-top:20px;">Observa el histórico de inmuebles que has visitado recientemente</p>
+                </div>
+
+                <!-- Paso 6 -->
+                <div id="tutorial-step-6" class="tutorial-step hidden">
+                    <p class="tutorial-description">Aquí podrás encontrar 5 opciones de visualización prestablecidas:</p>
+                    <div class="tutorial-fake-tab tutorial-fake-tab-white">Histórico de inmuebles registrados</div>
+                    <p class="tutorial-description" style="margin-top:20px;">Obtén un consenso general de todos los inmuebles que han sido registrados en tu vitrina y qué decisión tomaste con ellos</p>
+                </div>
+
+                <div class="tutorial-footer">
+                    <button class="tutorial-btn-next" id="tutorial-next">SIGUIENTE &rarr;</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Property Card Template -->
     <template id="property-card-template">
         <article class="property-card">
