@@ -1075,9 +1075,6 @@ function renderAgent(agent) {
                 <p class="agent-phone"><strong>Tel:</strong> ${phoneHTML}</p>
             </div>
         </div>
-        <a href="${agent.linkMeeting || '#'}" target="_blank" class="agent-action-btn">
-            Agendar Reunión
-        </a>
     `;
 }
 
