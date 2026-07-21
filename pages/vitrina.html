@@ -154,6 +154,10 @@
                 <div id="tutorial-step-1" class="tutorial-step">
                     <h2 id="tutorial-title" class="tutorial-title">Bienvenido a tu visualizador de inmuebles personalizado</h2>
                     <p class="tutorial-description">Aquí podrás encontrar los inmuebles que hemos escogido para ti en base a tus preferencias dadas.</p>
+                    <div class="tutorial-step1-actions" style="display: flex; gap: 15px; justify-content: center; margin-top: 30px; margin-bottom: 10px;">
+                        <button class="tutorial-btn-action tutorial-btn-green" id="tutorial-start">Ver tutorial</button>
+                        <button class="tutorial-btn-action tutorial-btn-blue" id="tutorial-skip">Ingresar a vitrina</button>
+                    </div>
                 </div>
 
                 <!-- Paso 2 -->
@@ -202,9 +206,58 @@
                     <p class="tutorial-description" style="margin-top:20px;">Obtén un consenso general de todos los inmuebles que han sido registrados en tu vitrina y qué decisión tomaste con ellos</p>
                 </div>
 
-                <div class="tutorial-footer">
+                <div class="tutorial-footer hidden" id="tutorial-main-footer">
                     <button class="tutorial-btn-next" id="tutorial-next">SIGUIENTE &rarr;</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback Modal (Descartar) -->
+    <div id="feedback-modal" class="modal-overlay hidden" aria-hidden="true">
+        <div class="modal-content tutorial-modal-content" role="dialog" aria-modal="true" aria-labelledby="feedback-title">
+            <button class="tutorial-close-btn" aria-label="Cerrar modal" id="feedback-close">✕</button>
+            <div class="tutorial-body">
+                <img src="../assets/images/habitar-logo.png" alt="Habitar Inmobiliaria" class="tutorial-logo">
+                
+                <h2 id="feedback-title" class="tutorial-title">Cuéntanos ¿Qué no te interesó de este inmueble?</h2>
+                
+                <textarea id="feedback-textarea" class="feedback-textarea" placeholder="Escribe tu comentario aquí..."></textarea>
+                
+                <p class="feedback-disclaimer">Para Habitar Inmobiliaria tu opinión es importante y nos ayuda a conocerte mejor</p>
+
+                <div class="tutorial-footer">
+                    <button class="tutorial-btn-next" id="feedback-submit">Terminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="success-modal" class="modal-overlay hidden" aria-hidden="true">
+        <div class="modal-content tutorial-modal-content" role="dialog" aria-modal="true">
+            <button class="tutorial-close-btn" aria-label="Cerrar modal" id="success-close">✕</button>
+            <div class="tutorial-body" style="text-align: center;">
+                <img src="../assets/images/habitar-logo.png" alt="Habitar Inmobiliaria" class="tutorial-logo">
+                
+                <div class="success-checkmark-circle">
+                    <svg viewBox="0 0 24 24" class="success-checkmark-svg">
+                        <path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                    </svg>
+                </div>
+                
+                <h2 class="tutorial-title" style="margin-top: 10px; font-size: 1.3rem;">Se ha enviado tu comentario correctamente</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Modal -->
+    <div id="loading-modal" class="modal-overlay hidden" aria-hidden="true" style="z-index: 9999;">
+        <div class="modal-content tutorial-modal-content" role="dialog" aria-modal="true">
+            <div class="tutorial-body" style="text-align: center; padding: 40px 20px;">
+                <img src="../assets/images/habitar-logo.png" alt="Habitar Inmobiliaria" class="tutorial-logo">
+                <div class="spinner" style="margin: 40px auto; border-top-color: #4CAF50; width: 60px; height: 60px; border-width: 5px;"></div>
+                <h2 class="tutorial-title" style="margin-top: 20px; font-size: 1.2rem; color: #555;">Enviando tu comentario...</h2>
             </div>
         </div>
     </div>

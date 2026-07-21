@@ -2598,3 +2598,86 @@ body.lightbox-open {
     background-color: #a4e4a4;
     transform: translateY(-2px);
 }
+.feedback-textarea {
+    width: 100%;
+    min-height: 120px;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    padding: 15px;
+    font-size: 1rem;
+    font-family: inherit;
+    resize: vertical;
+    margin-bottom: 15px;
+    transition: border-color 0.2s;
+}
+
+.feedback-textarea:focus {
+    outline: none;
+    border-color: #333;
+}
+
+.feedback-disclaimer {
+    font-size: 0.95rem;
+    color: #666;
+    margin-bottom: 10px;
+    line-height: 1.4;
+    text-align: center;
+}
+
+.success-checkmark-circle {
+    width: 120px;
+    height: 120px;
+    background-color: #4CAF50;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 20px auto;
+    box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3);
+}
+
+.success-checkmark-svg {
+    width: 80px;
+    height: 80px;
+    color: white;
+}
+
+.modal-fade-out {
+    animation: fadeOutModal 0.5s forwards;
+}
+
+@keyframes fadeOutModal {
+    from { opacity: 1; }
+    to { opacity: 0; visibility: hidden; }
+}
+
+.tutorial-btn-action {
+    border: 2px solid #333;
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #333;
+    cursor: pointer;
+    transition: transform 0.2s, background-color 0.2s;
+}
+
+.tutorial-btn-action:hover {
+    transform: translateY(-2px);
+}
+
+.tutorial-btn-green {
+    background-color: #bdf2bd;
+}
+
+.tutorial-btn-green:hover {
+    background-color: #a4e4a4;
+}
+
+.tutorial-btn-blue {
+    background-color: #93c5fd;
+}
+
+.tutorial-btn-blue:hover {
+    background-color: #60a5fa;
+}

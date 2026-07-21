@@ -735,6 +735,22 @@ const api = {
         return res.ok;
     },
 
+    async enviarComentarioCliente(token, inmuebleId, comentario, estado = "DESCARTADO") {
+        const url = `${BACKEND_ORIGIN}/api/v1/vitrina/comentario-cliente`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { ...TUNNEL_HEADERS, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contactId: token,
+                inmuebleId: inmuebleId,
+                comentario: comentario,
+                estado: estado
+            })
+        });
+        if (!res.ok) await handleApiError(res);
+        return res.json();
+    },
+
     /**
      * Notifica ingreso a la vitrina (HubSpot vía middleware). Éxito típico: 204 sin cuerpo.
      */
@@ -1731,6 +1747,94 @@ async function loadHistoricoTab() {
     }
 }
 
+// Function to show the feedback modal
+const promptFeedbackModal = () => {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('feedback-modal');
+        const btnClose = document.getElementById('feedback-close');
+        const btnSubmit = document.getElementById('feedback-submit');
+        const textarea = document.getElementById('feedback-textarea');
+
+        if (!modal) {
+            resolve('');
+            return;
+        }
+
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+        textarea.value = '';
+
+        const close = () => {
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+            btnClose.removeEventListener('click', cancel);
+            btnSubmit.removeEventListener('click', submit);
+        };
+
+        const submit = () => {
+            const comment = textarea.value.trim();
+            close();
+            resolve(comment);
+        };
+
+        const cancel = () => {
+            close();
+            resolve(null);
+        };
+
+        btnClose.addEventListener('click', cancel);
+        btnSubmit.addEventListener('click', submit);
+    });
+};
+
+const showSuccessModal = () => {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('success-modal');
+        const btnClose = document.getElementById('success-close');
+        
+        if (!modal) {
+            resolve();
+            return;
+        }
+
+        modal.classList.remove('hidden', 'modal-fade-out');
+        modal.setAttribute('aria-hidden', 'false');
+
+        let timeoutId;
+
+        const close = () => {
+            clearTimeout(timeoutId);
+            modal.classList.add('modal-fade-out');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('modal-fade-out');
+                modal.setAttribute('aria-hidden', 'true');
+                btnClose.removeEventListener('click', close);
+                resolve();
+            }, 500); // esperar a que termine la animación css
+        };
+
+        btnClose.addEventListener('click', close);
+        timeoutId = setTimeout(close, 2500); // cerrar automático tras 2.5s
+    });
+};
+
+const showLoadingModal = () => {
+    const modal = document.getElementById('loading-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+    }
+};
+
+const hideLoadingModal = () => {
+    const modal = document.getElementById('loading-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.setAttribute('aria-hidden', 'true');
+    }
+};
+
 // ============================================================
 // Action Handler (Aprobar / Descartar)
 // ============================================================
@@ -1753,13 +1857,43 @@ async function applyEstadoChange(propRef, action, url) {
 
 async function handleAction(prop, card, action, url) {
     if (card.classList.contains('processing')) return;
+    
+    let savedFeedback = null;
+    
+    if (action === 'descartar') {
+        const feedback = await promptFeedbackModal();
+        if (feedback === null) {
+            // El usuario cerró el modal de feedback sin descartar
+            return;
+        }
+        savedFeedback = feedback.trim();
+    }
+
     card.classList.add('processing');
 
     // Disable all buttons in card
     card.querySelectorAll('button').forEach(b => b.disabled = true);
 
     try {
+        if (savedFeedback) showLoadingModal();
+        
         await applyEstadoChange(prop, action, url);
+
+        if (savedFeedback) {
+            const propertyIdFromUrl = extractPropertyIdFromUrl(prop.url || prop.urlReferencia || prop.urlInmueble || '');
+            const displayPropertyId = String(propertyIdFromUrl || prop.codigoNumerico || prop.id || '').trim();
+            
+            try {
+                await api.enviarComentarioCliente(state.token, displayPropertyId, savedFeedback);
+                hideLoadingModal();
+                // Mostrar éxito
+                await showSuccessModal();
+            } catch (err) {
+                hideLoadingModal();
+                console.error('Error al enviar el comentario:', err);
+                // No bloqueamos el flujo si el comentario falla, el inmueble ya fue descartado.
+            }
+        }
 
         // Animate removal from current tab
         await animateRemoval(card, action === 'aprobar' ? 'right' : 'left');
@@ -2830,6 +2964,10 @@ async function init() {
         const tutorialClose = document.getElementById('tutorial-close');
         const tutorialNext = document.getElementById('tutorial-next');
         
+        const tutorialStart = document.getElementById('tutorial-start');
+        const tutorialSkip = document.getElementById('tutorial-skip');
+        const tutorialMainFooter = document.getElementById('tutorial-main-footer');
+
         const tutorialStep1 = document.getElementById('tutorial-step-1');
         const tutorialStep2 = document.getElementById('tutorial-step-2');
         const tutorialStep3 = document.getElementById('tutorial-step-3');
@@ -2841,7 +2979,7 @@ async function init() {
 
         const tutorialSeen = localStorage.getItem(`tutorial_seen_${state.token}`);
 
-        if (tutorialModal && tutorialClose && tutorialNext && !tutorialSeen) {
+        if (tutorialModal && tutorialClose && !tutorialSeen) {
             tutorialModal.classList.remove('hidden');
             tutorialModal.setAttribute('aria-hidden', 'false');
 
@@ -2855,6 +2993,7 @@ async function init() {
                 if (currentStep === 1) {
                     tutorialStep1.classList.add('hidden');
                     tutorialStep2.classList.remove('hidden');
+                    if (tutorialMainFooter) tutorialMainFooter.classList.remove('hidden');
                     currentStep++;
                 } else if (currentStep === 2) {
                     tutorialStep2.classList.add('hidden');
@@ -2871,7 +3010,7 @@ async function init() {
                 } else if (currentStep === 5) {
                     tutorialStep5.classList.add('hidden');
                     tutorialStep6.classList.remove('hidden');
-                    tutorialNext.textContent = 'FINALIZAR';
+                    if (tutorialNext) tutorialNext.textContent = 'FINALIZAR';
                     currentStep++;
                 } else {
                     closeTutorial();
@@ -2879,7 +3018,9 @@ async function init() {
             };
 
             tutorialClose.addEventListener('click', closeTutorial);
-            tutorialNext.addEventListener('click', nextStep);
+            if (tutorialNext) tutorialNext.addEventListener('click', nextStep);
+            if (tutorialStart) tutorialStart.addEventListener('click', nextStep);
+            if (tutorialSkip) tutorialSkip.addEventListener('click', closeTutorial);
         }
 
         const nombreProspecto =
