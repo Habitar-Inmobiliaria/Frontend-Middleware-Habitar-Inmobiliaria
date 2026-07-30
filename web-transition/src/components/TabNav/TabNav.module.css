@@ -9,6 +9,13 @@
   flex-wrap: wrap;
 }
 
+/* Dentro del grid de PC: la línea la pinta .topSection. */
+.embedded {
+  margin-top: 0;
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
 .tab {
   display: inline-flex;
   align-items: center;

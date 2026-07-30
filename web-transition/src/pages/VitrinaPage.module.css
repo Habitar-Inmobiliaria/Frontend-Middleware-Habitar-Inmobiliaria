@@ -5,25 +5,45 @@
   padding: 32px 24px;
 }
 
-.header {
+/* PC: título | sidebar
+         tabs  | sidebar  → agente+CTA anclados a la línea inferior. */
+.topSection {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-areas:
+    'title sidebar'
+    'tabs sidebar';
+  column-gap: 24px;
+  row-gap: 12px;
+  align-items: stretch;
   margin-bottom: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  flex-wrap: wrap;
+  padding-bottom: 0;
+  border-bottom: 2px solid var(--border-color);
 }
 
 .headerText {
+  grid-area: title;
+  align-self: start;
   min-width: 0;
 }
 
 .sidebar {
-  flex-shrink: 0;
+  grid-area: sidebar;
   width: 280px;
   max-width: 100%;
   display: flex;
   flex-direction: column;
+  justify-content: flex-end;
+  gap: 10px;
+  align-self: stretch;
+  padding-bottom: 12px;
+  box-sizing: border-box;
+}
+
+.tabs {
+  grid-area: tabs;
+  align-self: end;
+  min-width: 0;
 }
 
 .title {
@@ -140,22 +160,22 @@
     padding: 16px;
   }
 
-  .header {
-    flex-direction: column;
-    align-items: stretch;
-    /* Sin aire bajo el CTA: la línea la pone TabNav (border-top). */
+  .topSection {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'title'
+      'sidebar'
+      'tabs';
+    column-gap: 0;
+    row-gap: 12px;
     margin-bottom: 0;
-    gap: 12px;
-    padding-bottom: 0;
+    border-bottom: none;
   }
 
   .sidebar {
     width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin: 0;
-    padding: 0;
+    justify-content: flex-start;
+    padding-bottom: 0;
   }
 
   .mainWrapSplit {

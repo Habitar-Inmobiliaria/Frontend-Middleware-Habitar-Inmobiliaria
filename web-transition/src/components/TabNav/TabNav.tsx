@@ -29,12 +29,26 @@ interface TabNavProps {
   activeTab: TabId;
   counts: Record<Exclude<TabId, 'historico'>, number>;
   onChange: (tab: TabId) => void;
+  /** Clase extra (p. ej. área de grid en el layout de PC). */
+  className?: string;
+  /** Sin margen/borde propio: el contenedor padre dibuja la línea. */
+  embedded?: boolean;
 }
 
 // Barra de pestañas que filtran los inmuebles por estado (+ Histórico).
-export default function TabNav({ activeTab, counts, onChange }: TabNavProps) {
+export default function TabNav({
+  activeTab,
+  counts,
+  onChange,
+  className,
+  embedded = false,
+}: TabNavProps) {
   return (
-    <nav className={styles.nav} role="tablist" aria-label="Secciones de propiedades">
+    <nav
+      className={`${styles.nav} ${embedded ? styles.embedded : ''} ${className ?? ''}`}
+      role="tablist"
+      aria-label="Secciones de propiedades"
+    >
       {TABS.map((tab) => {
         const isActive = tab.id === activeTab;
         return (
