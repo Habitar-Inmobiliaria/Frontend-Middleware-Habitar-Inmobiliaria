@@ -8,7 +8,6 @@ const BACKEND_ORIGIN = IS_LOCAL_DEV
     : 'https://backend-middleware-habitar-inmobiliaria-production.up.railway.app';
 
 const API_BASE = `${BACKEND_ORIGIN}/api/v1/vitrina`;
-const DEFAULT_TOKEN = '197928127379';
 
 // Header needed to bypass localtunnel's HTML verification page
 const TUNNEL_HEADERS = { 'bypass-tunnel-reminder': 'true' };
@@ -2925,8 +2924,8 @@ async function init() {
             .trim();
     }
 
-    // 1. Intentar leer desde el path: /vitrina/{token}
-    const pathMatch = window.location.pathname.match(/\/vitrina\/([^/]+)/);
+    // 1. Intentar leer desde el path: /vitrina/{token} o /vitrina-legacy/{token}
+    const pathMatch = window.location.pathname.match(/\/vitrina(?:-legacy)?\/([^/]+)/);
     const pathTokenRaw = pathMatch ? decodeURIComponent(pathMatch[1]) : '';
 
     // 2. Fallback a query params para compatibilidad con enlaces anteriores
@@ -2938,12 +2937,20 @@ async function init() {
 
     const pathTokenDecoded = sanitizeToken(decodeToken(cleanPathTokenRaw));
     const queryTokenDecoded = sanitizeToken(decodeToken(cleanQueryTokenRaw));
-    state.token = pathTokenDecoded || queryTokenDecoded || DEFAULT_TOKEN;
+    state.token = pathTokenDecoded || queryTokenDecoded;
+
+    if (!state.token) {
+        elLoadingState.classList.add('hidden');
+        elEmptyState.classList.remove('hidden');
+        if (elEmptyTitle) elEmptyTitle.textContent = 'Enlace inválido';
+        if (elEmptyDesc) {
+            elEmptyDesc.textContent = 'Accede con un enlace válido: /vitrina/{token}';
+        }
+        return;
+    }
 
     if (IS_LOCAL_DEV) {
         console.log(`[Vitrina local] API: ${API_BASE} | token: ${state.token}`);
-    } else {
-        console.log(`Vitrina token: ${state.token}`);
     }
 
     try {

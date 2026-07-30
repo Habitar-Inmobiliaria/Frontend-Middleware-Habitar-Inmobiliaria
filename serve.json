@@ -2,11 +2,15 @@
   "rewrites": [
     {
       "source": "/vitrina/:token",
-      "destination": "/pages/vitrina.html"
+      "destination": "/react/index.html"
     },
     {
       "source": "/vitrina-react/:token",
       "destination": "/react/index.html"
+    },
+    {
+      "source": "/vitrina-legacy/:token",
+      "destination": "/pages/vitrina.html"
     }
   ]
 }

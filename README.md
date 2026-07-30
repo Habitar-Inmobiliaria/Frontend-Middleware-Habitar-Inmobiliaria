@@ -4,6 +4,18 @@ Vitrina inmobiliaria web para clientes de Habitar Inmobiliaria.
 
 Permite visualizar inmuebles, cambiar su estado (me interesa / descartado), ver visitados y consultar el **Histórico de Inmuebles registrados** con carga diferida (lazy load).
 
+## Versión oficial
+
+La vitrina en producción se sirve con **React** (`web-transition/`):
+
+| URL | App |
+|-----|-----|
+| `/vitrina/{token}` | **React (oficial)** |
+| `/vitrina-react/{token}` | Alias React (transición) |
+| `/vitrina-legacy/{token}` | Vanilla (solo rollback) |
+
+No existe token por defecto: sin `{token}` en la URL la vitrina no carga datos de un cliente.
+
 ## Características principales
 
 - Visualización de inmuebles por pestañas:
@@ -12,65 +24,65 @@ Permite visualizar inmuebles, cambiar su estado (me interesa / descartado), ver 
   - `Descartadas`
   - `Visitados`
   - `Histórico de Inmuebles registrados`
-- Modal de detalle de inmueble con galería.
-- Caché en memoria para detalle de inmuebles.
-- Carga diferida del histórico para no sobrecargar la carga inicial.
+- Modal de detalle (galería, mapa, video, lightbox)
+- Comentarios (sidebar en Me interesa / Visitados)
+- Tutorial de bienvenida, notificación de visita
+- Recuperación de inmuebles no disponibles (middleware Wasi + n8n)
+- Botón flotante de WhatsApp
 - Estética responsive (desktop y mobile)
 
 ## Tecnologías
 
-- HTML
-- CSS
-- JavaScript (vanilla)
+- **Oficial:** React + TypeScript + Vite + React Router + CSS Modules
+- **Legacy (rollback):** HTML / CSS / JavaScript vanilla (`pages/`, `js/`, `css/`)
 
 ## Estructura del proyecto
 
 ```text
-frontend/
-  index.html
-  pages/
-    vitrina.html
-  css/
-    vitrina/
-      vitrina.css
-  js/
-    vitrina/
-      vitrina.js
-    shared/
-      api-error-handler.js
+/
+  web-transition/          # App React (fuente oficial)
+  pages/vitrina.html       # Vanilla (rollback)
+  js/vitrina/vitrina.js
+  css/vitrina/vitrina.css
+  scripts/vercel-build.mjs # Build combinado para Vercel
+  vercel.json
+  docs/cutover-paralelo.md
 ```
 
 ## Requisitos
 
-- Navegador moderno (Chrome, Edge, Firefox, Safari).
-- (Opcional) Extensión de servidor estático para desarrollo local.
+- Node.js 20+ (para desarrollo/build de React)
+- Navegador moderno (Chrome, Edge, Firefox, Safari)
 
-## Ejecución local
+## Ejecución local (React)
 
-Como es un frontend estático, puedes abrir `frontend/pages/vitrina.html` directamente o servirlo con un servidor local.
+```bash
+cd web-transition
+npm install
+npm run dev
+```
 
-Ejemplo con VS Code + Live Server:
+Abrir `http://localhost:5173/vitrina/{token}`.
 
-1. Abre la carpeta del proyecto.
-2. Haz clic derecho sobre `frontend/pages/vitrina.html`.
-3. Selecciona **Open with Live Server**.
+Backend local opcional: en `web-transition/.env` definir `VITE_BACKEND_ORIGIN=http://localhost:8080`.
 
-## Configuración y datos
+## Build / deploy (Vercel)
 
-En `frontend/js/vitrina/vitrina.js` se encuentran constantes de configuración:
+```bash
+node scripts/vercel-build.mjs
+```
 
-- `API_BASE`: endpoint principal de vitrina.
-- `DEFAULT_TOKEN`: token por defecto para pruebas.
-- `TUNNEL_HEADERS`: encabezado para bypass del túnel.
+Publica vanilla + React en `.vercel-out/`. Ver [`docs/cutover-paralelo.md`](docs/cutover-paralelo.md).
 
-### Endpoints utilizados
+## Endpoints utilizados
 
 - `GET /api/v1/vitrina/{token}`
 - `GET /api/v1/vitrina/{token}/inmuebles/{wasiId}`
-- `PATCH /api/v1/vitrina/{token}/estado/aprobar`
-- `PATCH /api/v1/vitrina/{token}/estado/descartar`
-- `PATCH /api/v1/vitrina/{token}/estado/visitar`
+- `GET /api/v1/vitrina/recuperar-por-referencia/{referencia}`
+- `PATCH /api/v1/vitrina/{token}/estado/aprobar|descartar|visitar`
 - `GET /api/v1/historico-inmuebles/por-cliente/{token}`
+- `POST /api/v1/vitrina/notificar-visita`
+- `GET /api/v1/vitrina/{token}/comentarios`
 
 ## Comportamiento de histórico
 
@@ -82,12 +94,12 @@ En `frontend/js/vitrina/vitrina.js` se encuentran constantes de configuración:
 ## UI/Branding
 
 - Fondo con logo de Habitar Inmobiliaria en gran tamaño y baja opacidad.
-- Footer con marca de copyright:
-  - `© HabitarInmobiliaria 2026`
+- Footer: `© HabitarInmobiliaria 2026`
+- Favicon Habitar
+- Botón flotante de WhatsApp
 
-## Mejoras futuras sugeridas
+## Seguridad
 
-- Agregar pruebas E2E para flujos de tabs y histórico.
-- Manejo avanzado de errores en histórico (mensajes más detallados).
-- Estrategias de caché con expiración temporal.
-
+- No hay `DEFAULT_TOKEN` de cliente real en el frontend.
+- Credenciales Wasi viven solo en el backend (`WASI_TOKEN` / `WASI_ID_COMPANY` en Railway).
+- Pendiente operativo: rotar `WASI_TOKEN` si estuvo expuesto en historial Git antiguo.
