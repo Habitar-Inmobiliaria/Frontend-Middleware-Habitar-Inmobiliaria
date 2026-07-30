@@ -31,6 +31,7 @@ import ImportantInfoSidebar, {
   hasVisibleComments,
 } from '../components/ImportantInfoSidebar/ImportantInfoSidebar';
 import TutorialModal from '../components/TutorialModal/TutorialModal';
+import WhatsAppFloat from '../components/WhatsAppFloat/WhatsAppFloat';
 import { hasSeenTutorial, markTutorialSeen } from '../utils/tutorial';
 import { tryNotifyVitrinaVisitOnce } from '../utils/visita';
 import { normalizeDisplayText } from '../utils/text';
@@ -354,6 +355,10 @@ export default function VitrinaPage() {
     return (
       <main className={styles.layout}>
         <div className={styles.state}>Cargando vitrina…</div>
+        <footer className={styles.footer}>
+          <p>&copy; HabitarInmobiliaria 2026</p>
+        </footer>
+        <WhatsAppFloat />
       </main>
     );
   }
@@ -365,6 +370,10 @@ export default function VitrinaPage() {
           <div className={styles.stateTitle}>No se pudo cargar la vitrina</div>
           <p>{error}</p>
         </div>
+        <footer className={styles.footer}>
+          <p>&copy; HabitarInmobiliaria 2026</p>
+        </footer>
+        <WhatsAppFloat />
       </main>
     );
   }
@@ -483,6 +492,12 @@ export default function VitrinaPage() {
           }}
         />
       )}
+
+      <footer className={styles.footer}>
+        <p>&copy; HabitarInmobiliaria 2026</p>
+      </footer>
+
+      <WhatsAppFloat />
     </main>
   );
 }

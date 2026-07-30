@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Modal from './Modal';
+import { HABITAR_LOGO_URL } from '../../utils/brand';
 import styles from './modals.module.css';
 
 interface FeedbackModalProps {
@@ -14,6 +15,7 @@ export default function FeedbackModal({ onSubmit, onCancel }: FeedbackModalProps
 
   return (
     <Modal onClose={onCancel} showClose labelledBy="feedback-title">
+      <img src={HABITAR_LOGO_URL} alt="Habitar Inmobiliaria" className={styles.logo} />
       <h2 id="feedback-title" className={styles.title}>
         Cuéntanos ¿Qué no te interesó de este inmueble?
       </h2>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Modal from '../modals/Modal';
 import modalStyles from '../modals/modals.module.css';
+import { HABITAR_LOGO_URL } from '../../utils/brand';
 import styles from './TutorialModal.module.css';
 
 interface TutorialModalProps {
@@ -26,6 +27,12 @@ export default function TutorialModal({ onClose }: TutorialModalProps) {
 
   return (
     <Modal onClose={onClose} showClose labelledBy="tutorial-title">
+      <img
+        src={HABITAR_LOGO_URL}
+        alt="Habitar Inmobiliaria"
+        className={styles.logo}
+      />
+
       {step === 1 && (
         <div className={styles.step}>
           <h2 id="tutorial-title" className={modalStyles.title}>

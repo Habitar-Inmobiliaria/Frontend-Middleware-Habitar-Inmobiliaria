@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import Modal from './Modal';
+import { HABITAR_LOGO_URL } from '../../utils/brand';
 import styles from './modals.module.css';
 
 interface SuccessModalProps {
@@ -22,6 +23,7 @@ export default function SuccessModal({ onClose }: SuccessModalProps) {
 
   return (
     <Modal onClose={onClose} showClose>
+      <img src={HABITAR_LOGO_URL} alt="Habitar Inmobiliaria" className={styles.logo} />
       <div className={styles.checkmarkCircle}>
         <svg viewBox="0 0 24 24" className={styles.checkmarkSvg}>
           <path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />

@@ -1,0 +1,48 @@
+/* Botón flotante de WhatsApp (esquina inferior derecha). */
+
+.fab {
+  position: fixed;
+  right: 20px;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #25d366;
+  color: #ffffff;
+  box-shadow:
+    0 4px 14px rgba(37, 211, 102, 0.45),
+    0 2px 6px rgba(0, 0, 0, 0.16);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  text-decoration: none;
+}
+
+.fab:hover {
+  background: #20bd5a;
+  transform: translateY(-2px) scale(1.04);
+  box-shadow:
+    0 8px 20px rgba(37, 211, 102, 0.5),
+    0 3px 8px rgba(0, 0, 0, 0.18);
+}
+
+.fab:focus-visible {
+  outline: 2px solid #128c7e;
+  outline-offset: 3px;
+}
+
+.icon {
+  width: 30px;
+  height: 30px;
+  display: block;
+}
+
+/* Sobre el dock de comentarios en móvil */
+@media (max-width: 900px) {
+  .fab {
+    bottom: calc(var(--vitrina-important-dock-pad, 20px) + 12px + env(safe-area-inset-bottom, 0px));
+    right: 16px;
+  }
+}
