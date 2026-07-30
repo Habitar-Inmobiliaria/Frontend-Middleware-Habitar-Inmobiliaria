@@ -1,6 +1,6 @@
 /* CTA hacia el buscador externo (adaptado de .sidebar-buscador-* en vitrina.css). */
 .wrapper {
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .link {
@@ -8,14 +8,14 @@
   width: 100%;
   box-sizing: border-box;
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: 10px;
   background: #fff;
   color: var(--text-primary);
   font-family: var(--font-family);
-  font-size: 0.82rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  line-height: 1.45;
-  padding: 12px 14px;
+  line-height: 1.4;
+  padding: 10px 12px;
   text-align: center;
   text-decoration: none;
   box-shadow: var(--shadow-sm);
@@ -46,13 +46,15 @@
 }
 
 @media (max-width: 600px) {
+  /* Sin margen extra: el borde inferior lo pone .sidebar. */
   .wrapper {
-    margin-top: 10px;
+    margin-top: 0;
+    margin-bottom: 0;
   }
 
   .link {
-    padding: 14px 16px;
-    font-size: 0.8rem;
-    line-height: 1.5;
+    padding: 10px 12px;
+    font-size: 0.74rem;
+    line-height: 1.4;
   }
 }

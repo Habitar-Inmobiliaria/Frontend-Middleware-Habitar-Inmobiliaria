@@ -1,57 +1,63 @@
-/* Tarjeta de asesor (adaptada de .agent-* en vitrina.css). */
+/* Tarjeta de asesor: columna centrada compacta (título → foto → datos). */
 .card {
+  width: 100%;
+  box-sizing: border-box;
   background-color: var(--bg-card);
-  border-radius: 14px;
+  border-radius: 12px;
   box-shadow: var(--shadow-card);
-  padding: 14px 20px;
+  padding: 12px 14px 10px;
   border: 1px solid var(--border-color);
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 14px;
+  text-align: center;
+  gap: 4px;
 }
 
 .photo {
-  width: 52px;
-  height: 52px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
   border: 2px solid var(--bg-app);
-}
-
-.infoCol {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+  margin: 2px 0 0;
 }
 
 .title {
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.09em;
   color: var(--text-secondary);
   font-weight: 700;
-  margin-bottom: 4px;
+  margin: 0;
+  line-height: 1.3;
 }
 
 .name {
-  font-size: 0.9rem;
+  font-size: 0.84rem;
   font-weight: 700;
-  margin-bottom: 2px;
+  margin: 0;
   color: #111;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .details {
   color: var(--text-secondary);
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 1px;
+  width: 100%;
+  min-width: 0;
 }
 
 .details p {
   margin: 0;
-  line-height: 1.4;
+  line-height: 1.35;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
@@ -68,8 +74,9 @@
 .phone {
   display: flex;
   align-items: center;
+  justify-content: center;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
 }
 
 .phoneNumber {
@@ -78,35 +85,26 @@
 
 .phoneExt {
   color: #1d4ed8;
-  font-size: 0.82rem;
+  font-size: 0.72rem;
   font-weight: 600;
 }
 
 @media (max-width: 600px) {
   .card {
-    width: 100%;
-    flex-direction: column;
-    text-align: center;
-    gap: 10px;
-    padding: 16px;
+    padding: 10px 12px 8px;
+    gap: 3px;
   }
 
   .photo {
-    width: 72px;
-    height: 72px;
-    margin: 0 auto;
+    width: 52px;
+    height: 52px;
   }
 
-  .infoCol {
-    align-items: center;
-    width: 100%;
+  .name {
+    font-size: 0.8rem;
   }
 
   .details {
-    align-items: center;
-  }
-
-  .phone {
-    justify-content: center;
+    font-size: 0.7rem;
   }
 }

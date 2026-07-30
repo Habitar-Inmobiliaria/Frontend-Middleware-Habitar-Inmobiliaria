@@ -103,7 +103,8 @@
     grid-template-columns: 1fr 1fr;
     gap: 8px;
     border-bottom: none;
-    margin-top: 14px;
+    /* La línea ya está bajo el CTA; solo un respiro antes de las tabs. */
+    margin-top: 12px;
     margin-bottom: 16px;
     align-items: stretch;
   }
