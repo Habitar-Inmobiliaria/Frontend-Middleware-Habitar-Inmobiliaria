@@ -49,3 +49,15 @@
 .discard:active:not(:disabled) {
   transform: scale(0.97);
 }
+
+@media (max-width: 600px) {
+  .bar {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .btn {
+    padding: 14px;
+    font-size: 0.95rem;
+  }
+}

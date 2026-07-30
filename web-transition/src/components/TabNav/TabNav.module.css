@@ -96,8 +96,59 @@
   justify-content: center;
 }
 
+/* Mobile: rejilla 2×2 simétrica (paridad con vitrina.css ≤600px). */
 @media (max-width: 600px) {
+  .nav {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    border-bottom: none;
+    margin-top: 14px;
+    margin-bottom: 16px;
+    align-items: stretch;
+  }
+
+  .tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: 100%;
+    min-height: 64px;
+    padding: 12px 8px;
+    margin-bottom: 0;
+    font-size: 0.82rem;
+    text-align: center;
+    line-height: 1.25;
+    white-space: normal;
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    border-bottom: 2px solid var(--border-color);
+    background: #fff;
+  }
+
+  .tab:hover {
+    background: #f9fafb;
+  }
+
+  .tab.active {
+    background: #eef2ff;
+    color: var(--text-primary);
+    border-color: var(--text-primary);
+    border-bottom-color: var(--text-primary);
+    font-weight: 700;
+  }
+
+  .badge {
+    flex-shrink: 0;
+  }
+
   .tabHistorico {
-    max-width: 240px;
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    width: 100%;
+    max-width: none;
+    min-height: 56px;
   }
 }

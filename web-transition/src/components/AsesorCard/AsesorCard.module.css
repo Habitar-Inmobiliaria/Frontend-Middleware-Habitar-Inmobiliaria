@@ -52,6 +52,8 @@
 .details p {
   margin: 0;
   line-height: 1.4;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .link {
@@ -83,5 +85,28 @@
 @media (max-width: 600px) {
   .card {
     width: 100%;
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
+    padding: 16px;
+  }
+
+  .photo {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto;
+  }
+
+  .infoCol {
+    align-items: center;
+    width: 100%;
+  }
+
+  .details {
+    align-items: center;
+  }
+
+  .phone {
+    justify-content: center;
   }
 }

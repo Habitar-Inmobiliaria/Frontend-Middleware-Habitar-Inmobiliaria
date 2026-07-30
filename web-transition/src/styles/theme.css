@@ -65,3 +65,12 @@ body::before {
   -webkit-backface-visibility: hidden;
   transform: translate3d(0, 0, 0);
 }
+
+/* En móvil: marca de agua más pequeña y suave para no tapar tabs/texto. */
+@media (max-width: 600px) {
+  body::before {
+    background-size: min(92vw, 420px);
+    opacity: 0.045;
+    background-position: center 42%;
+  }
+}
