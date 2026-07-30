@@ -5,7 +5,7 @@
   padding: 32px 24px;
 }
 
-/* PC: título+tabs (juntos, sin hueco) | sidebar anclado a la línea. */
+/* PC: título arriba | tabs y sidebar anclados a la misma línea. */
 .topSection {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 280px;
@@ -22,8 +22,9 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  gap: 16px;
+  gap: 12px;
   min-width: 0;
+  min-height: 0;
 }
 
 .headerText {
@@ -39,12 +40,16 @@
   justify-content: flex-end;
   gap: 10px;
   align-self: stretch;
-  padding-bottom: 12px;
+  /* Misma base que las tabs sobre la línea. */
+  padding-bottom: 0;
   box-sizing: border-box;
 }
 
 .tabs {
   min-width: 0;
+  width: 100%;
+  /* Empuja las tabs hasta la línea de división. */
+  margin-top: auto;
 }
 
 .title {
@@ -187,6 +192,7 @@
 
   .tabs {
     order: 3;
+    margin-top: 0;
   }
 
   .mainWrapSplit {

@@ -1,7 +1,7 @@
 /* Barra de pestañas de estado (adaptada de .tab-* en vitrina.css). */
 .nav {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 8px;
   margin-top: 20px;
   margin-bottom: 24px;
@@ -14,11 +14,13 @@
   margin-top: 0;
   margin-bottom: 0;
   border-bottom: none;
+  align-items: flex-end;
 }
 
 .tab {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 10px 18px;
   border: none;
@@ -32,6 +34,7 @@
   transition: color 0.2s, border-color 0.2s, background 0.2s;
   margin-bottom: -2px;
   border-radius: 6px 6px 0 0;
+  box-sizing: border-box;
 }
 
 .tab:hover {
@@ -42,6 +45,21 @@
 .tab.active {
   color: var(--text-primary);
   border-bottom-color: var(--text-primary);
+}
+
+/* Embedded: todos los bottoms alineados sobre la línea del padre. */
+.embedded .tab {
+  margin-bottom: 0;
+  min-height: 44px;
+  padding-bottom: 10px;
+  border-bottom-width: 3px;
+  border-bottom-style: solid;
+  border-bottom-color: transparent;
+}
+
+.embedded .tab.active {
+  border-bottom-color: var(--text-primary);
+  margin-bottom: -2px;
 }
 
 /* ---- Badges ---- */
@@ -101,6 +119,12 @@
   line-height: 1.2;
   max-width: 260px;
   justify-content: center;
+  align-items: center;
+}
+
+.embedded .tabHistorico {
+  min-height: 44px;
+  align-self: flex-end;
 }
 
 /* ≤900px: rejilla 2×2 y línea pegada al CTA (sin hueco). */
