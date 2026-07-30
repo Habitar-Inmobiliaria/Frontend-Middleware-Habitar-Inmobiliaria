@@ -45,8 +45,8 @@
   text-decoration: underline;
 }
 
-@media (max-width: 600px) {
-  /* Sin margen extra: el borde inferior lo pone .sidebar. */
+@media (max-width: 900px) {
+  /* Gap agente→CTA lo controla .sidebar; sin margen bajo el CTA. */
   .wrapper {
     margin-top: 0;
     margin-bottom: 0;

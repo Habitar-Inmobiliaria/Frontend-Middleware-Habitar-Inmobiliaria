@@ -96,16 +96,18 @@
   justify-content: center;
 }
 
-/* Mobile: rejilla 2×2 simétrica (paridad con vitrina.css ≤600px). */
-@media (max-width: 600px) {
+/* ≤900px: rejilla 2×2 y línea pegada al CTA (sin hueco). */
+@media (max-width: 900px) {
   .nav {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
-    border-bottom: none;
-    /* La línea ya está bajo el CTA; solo un respiro antes de las tabs. */
-    margin-top: 12px;
+    /* La línea separadora va ARRIBA, justo bajo el CTA. */
+    margin-top: 0;
     margin-bottom: 16px;
+    padding-top: 12px;
+    border-top: 2px solid var(--border-color);
+    border-bottom: none;
     align-items: stretch;
   }
 
@@ -151,5 +153,17 @@
     width: 100%;
     max-width: none;
     min-height: 56px;
+  }
+}
+
+@media (max-width: 600px) {
+  .nav {
+    padding-top: 10px;
+    margin-bottom: 16px;
+  }
+
+  .tab {
+    min-height: 60px;
+    font-size: 0.8rem;
   }
 }

@@ -143,10 +143,19 @@
   .header {
     flex-direction: column;
     align-items: stretch;
+    /* Sin aire bajo el CTA: la línea la pone TabNav (border-top). */
+    margin-bottom: 0;
+    gap: 12px;
+    padding-bottom: 0;
   }
 
   .sidebar {
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
   }
 
   .mainWrapSplit {
@@ -183,22 +192,6 @@
     padding-bottom: calc(12px + 72px + env(safe-area-inset-bottom, 0px));
     max-width: 100%;
     overflow-x: hidden;
-  }
-
-  .header {
-    margin-bottom: 0;
-    gap: 12px;
-    padding-bottom: 0;
-    border-bottom: none;
-  }
-
-  /* Agente + CTA como bloque pegado a la línea separadora. */
-  .sidebar {
-    width: 100%;
-    gap: 10px;
-    margin: 0;
-    padding: 0;
-    border-bottom: 2px solid var(--border-color);
   }
 
   .headerText {
