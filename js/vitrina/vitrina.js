@@ -570,10 +570,11 @@ const api = {
             return unavailableProbeInFlight.get(cacheKey);
         }
 
-        const url = `https://api.wasi.co/v1/property/search?id_company=4175603&wasi_token=jzgY_bsS4_fR9F_G1t1&scope=3&referencia=${encodeURIComponent(ref)}`;
+        // Credenciales Wasi solo en el backend (GET .../recuperar-por-referencia/{ref}).
+        const url = `${API_BASE}/recuperar-por-referencia/${encodeURIComponent(ref)}`;
         const probePromise = (async () => {
             try {
-                const res = await fetch(url);
+                const res = await fetch(url, { headers: TUNNEL_HEADERS });
                 if (!res.ok) return null;
                 const raw = await res.json();
                 const normalized = normalizeWasiProbePayload(raw);

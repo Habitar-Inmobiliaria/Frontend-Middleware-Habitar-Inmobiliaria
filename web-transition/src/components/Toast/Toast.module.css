@@ -1,0 +1,24 @@
+/* Notificación tipo toast (adaptada de .vitrina-toast en vitrina.css). */
+.toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: #1f2937;
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-family);
+  font-size: 0.9rem;
+  font-weight: 500;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}

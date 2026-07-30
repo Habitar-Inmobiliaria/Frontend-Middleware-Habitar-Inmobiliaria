@@ -1,0 +1,112 @@
+/* Estilos del tutorial de bienvenida (portados de .tutorial-* en vitrina.css) */
+
+.step {
+  width: 100%;
+}
+
+.description {
+  font-size: 1rem;
+  color: #555;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.step1Actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-top: 30px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.btnAction {
+  border: 2px solid #333;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+  cursor: pointer;
+  transition: transform 0.2s, background-color 0.2s;
+  font-family: inherit;
+}
+
+.btnAction:hover {
+  transform: translateY(-2px);
+}
+
+.btnGreen {
+  background-color: #bdf2bd;
+}
+
+.btnGreen:hover {
+  background-color: #a4e4a4;
+}
+
+.btnBlue {
+  background-color: #93c5fd;
+}
+
+.btnBlue:hover {
+  background-color: #60a5fa;
+}
+
+.fakeTab {
+  display: inline-block;
+  background-color: #e5e7eb;
+  color: #374151;
+  padding: 10px 40px;
+  border-radius: 8px;
+  border: 2px solid #333;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.fakeTabYellow {
+  background-color: #fde047;
+}
+
+.fakeTabRed {
+  background-color: #ffb4b4;
+}
+
+.fakeTabBlue {
+  background-color: #bfdbfe;
+}
+
+.fakeTabWhite {
+  background-color: #ffffff;
+}
+
+.fakeActions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 15px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.fakeSeparator {
+  font-weight: bold;
+  color: #555;
+}
+
+.fakeBtn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: 2px solid #333;
+  font-weight: 600;
+}
+
+.fakeBtnRed {
+  background-color: #ffb4b4;
+  color: #333;
+}
+
+.fakeBtnYellow {
+  background-color: #fde047;
+  color: #333;
+}

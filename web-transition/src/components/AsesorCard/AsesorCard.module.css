@@ -1,0 +1,87 @@
+/* Tarjeta de asesor (adaptada de .agent-* en vitrina.css). */
+.card {
+  background-color: var(--bg-card);
+  border-radius: 14px;
+  box-shadow: var(--shadow-card);
+  padding: 14px 20px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.photo {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 2px solid var(--bg-app);
+}
+
+.infoCol {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.title {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+  color: #111;
+}
+
+.details {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.details p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.phone {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.phoneNumber {
+  font-variant-numeric: tabular-nums;
+}
+
+.phoneExt {
+  color: #1d4ed8;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+@media (max-width: 600px) {
+  .card {
+    width: 100%;
+  }
+}

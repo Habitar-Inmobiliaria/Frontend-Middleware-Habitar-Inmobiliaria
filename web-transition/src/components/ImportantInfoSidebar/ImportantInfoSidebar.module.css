@@ -1,0 +1,214 @@
+/* Sidebar «Información Importante» — portado de .important-info* en vitrina.css */
+
+.section {
+  margin-top: 0;
+  position: sticky;
+  top: 12px;
+  align-self: start;
+  min-width: 0;
+}
+
+.embed {
+  background: var(--bg-card);
+  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.toggle {
+  width: 100%;
+  border: none;
+  border-radius: 0;
+  background: #fff;
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: default;
+  pointer-events: none;
+  box-shadow: none;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.chevron {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.panel {
+  position: static;
+  width: 100%;
+  max-height: min(72vh, 720px);
+  overflow-y: auto;
+  border: none;
+  border-radius: 0;
+  background: #fff;
+  box-shadow: none;
+}
+
+.content {
+  padding: 14px 16px 16px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.item {
+  display: block;
+}
+
+.itemClickable {
+  cursor: pointer;
+  border-radius: 14px;
+  outline: none;
+  transition: box-shadow 0.2s ease;
+}
+
+.itemClickable:focus-visible {
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.45);
+}
+
+.itemClickable:hover .bubble {
+  border-color: #93c5fd;
+  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.12);
+}
+
+.bubble {
+  background: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 10px 12px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.text {
+  margin: 0 0 6px;
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.meta {
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.link {
+  border: none;
+  background: transparent;
+  color: #1d4ed8;
+  font-family: var(--font-family);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0;
+  margin: 0;
+  cursor: inherit;
+  text-decoration: underline;
+}
+
+.itemClickable .link {
+  cursor: pointer;
+}
+
+.linkMuted {
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: default;
+}
+
+/* Highlight al saltar desde un comentario (clase aplicada al article de la card) */
+@keyframes spotlight {
+  0%,
+  100% {
+    box-shadow: var(--shadow-card);
+    border-color: var(--border-color);
+  }
+  35%,
+  65% {
+    box-shadow:
+      0 0 0 4px rgba(59, 130, 246, 0.38),
+      0 12px 28px rgba(37, 99, 235, 0.2);
+    border-color: #3b82f6;
+  }
+  50% {
+    box-shadow:
+      0 0 0 7px rgba(59, 130, 246, 0.18),
+      0 16px 36px rgba(37, 99, 235, 0.25);
+    border-color: #2563eb;
+  }
+}
+
+.cardHighlight {
+  animation: spotlight 1.15s ease-in-out 2;
+  position: relative;
+  z-index: 2;
+}
+
+@media (max-width: 900px) {
+  .embed {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    z-index: 55;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 32px rgba(15, 23, 42, 0.16);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: stretch;
+    height: auto;
+    min-height: 0;
+    max-height: min(52vh, 440px);
+    overflow: hidden;
+  }
+
+  .dockCollapsed {
+    max-height: none;
+  }
+
+  .toggle {
+    pointer-events: auto;
+    cursor: pointer;
+    flex-shrink: 0;
+    border-bottom: none;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .panel {
+    flex: 0 1 auto;
+    min-height: 0;
+    max-height: min(40vh, 300px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    position: relative;
+    margin: 0;
+  }
+
+  .dockCollapsed .panel {
+    max-height: 0;
+    min-height: 0;
+    flex: 0 0 auto;
+    overflow: hidden;
+    opacity: 0;
+    padding: 0;
+    margin: 0;
+    border: none;
+    pointer-events: none;
+  }
+}

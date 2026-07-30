@@ -1,0 +1,46 @@
+/* CTA hacia el buscador externo (adaptado de .sidebar-buscador-* en vitrina.css). */
+.wrapper {
+  margin-top: 12px;
+}
+
+.link {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.45;
+  padding: 12px 14px;
+  text-align: center;
+  text-decoration: none;
+  box-shadow: var(--shadow-sm);
+  transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.text {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.highlight {
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.link:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  transform: translateY(-1px);
+}
+
+.link:hover .highlight {
+  color: #1e40af;
+  text-decoration: underline;
+}

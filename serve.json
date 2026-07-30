@@ -1,6 +1,4 @@
 {
-  "buildCommand": "node scripts/vercel-build.mjs",
-  "outputDirectory": ".vercel-out",
   "rewrites": [
     {
       "source": "/vitrina/:token",

@@ -1,0 +1,15 @@
+# Artefactos de build / deploy
+.vercel-out/
+web-transition/dist/
+web-transition/node_modules/
+*.tsbuildinfo
+
+# Entorno local
+.env
+.env.local
+web-transition/.env
+web-transition/.env.local
+
+# IDE
+.idea/
+.vscode/

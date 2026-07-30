@@ -1,0 +1,159 @@
+/* ============================================================
+   Estilos compartidos de los modales del flujo de descarte
+   (adaptados de .modal-overlay / .tutorial-* / .feedback-* /
+   .success-* / .spinner en vitrina.css).
+   ============================================================ */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.content {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  padding: 40px 30px;
+  text-align: center;
+  background-color: #ffffff;
+  border-radius: 16px;
+  border: 2px solid #333;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  background-color: #ffb4b4;
+  border: 2px solid #333;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #333;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: transform 0.2s;
+}
+
+.close:hover {
+  transform: scale(1.05);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+/* ---- Feedback ---- */
+.textarea {
+  width: 100%;
+  min-height: 120px;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  padding: 15px;
+  font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
+  margin-bottom: 15px;
+  transition: border-color 0.2s;
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: #333;
+}
+
+.disclaimer {
+  font-size: 0.95rem;
+  color: #666;
+  margin-bottom: 10px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.footer {
+  width: 100%;
+  margin-top: 15px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+  display: flex;
+  justify-content: center;
+}
+
+.btnNext {
+  background-color: #bdf2bd;
+  border: 2px solid #333;
+  border-radius: 8px;
+  padding: 14px 24px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #333;
+  cursor: pointer;
+  width: 100%;
+  max-width: 240px;
+  transition: transform 0.2s, background-color 0.2s;
+  letter-spacing: 1px;
+}
+
+.btnNext:hover {
+  background-color: #a4e4a4;
+  transform: translateY(-2px);
+}
+
+/* ---- Loading ---- */
+.spinner {
+  width: 60px;
+  height: 60px;
+  border: 5px solid #e5e7eb;
+  border-top-color: #4caf50;
+  border-radius: 50%;
+  margin: 40px auto 20px;
+  animation: spin 1s infinite linear;
+}
+
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---- Success ---- */
+.checkmarkCircle {
+  width: 120px;
+  height: 120px;
+  background-color: #4caf50;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px auto;
+  box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3);
+}
+
+.checkmarkSvg {
+  width: 80px;
+  height: 80px;
+  color: white;
+}
