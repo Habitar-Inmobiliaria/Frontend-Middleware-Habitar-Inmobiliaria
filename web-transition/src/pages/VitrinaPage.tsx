@@ -387,25 +387,27 @@ export default function VitrinaPage() {
 
   return (
     <main className={styles.layout}>
-      {/* PC: sidebar comparte altura con título+tabs y se ancla a la línea. */}
+      {/* PC: columna izq (título+tabs juntos) | sidebar anclado a la línea. */}
       <header className={styles.topSection}>
-        <div className={styles.headerText}>
-          <h1 className={styles.title}>Vitrina Inmobiliaria</h1>
-          <p className={styles.subtitle}>
-            Revisa las propiedades seleccionadas para ti y gestiona tu interés.
-          </p>
+        <div className={styles.leftCol}>
+          <div className={styles.headerText}>
+            <h1 className={styles.title}>Vitrina Inmobiliaria</h1>
+            <p className={styles.subtitle}>
+              Revisa las propiedades seleccionadas para ti y gestiona tu interés.
+            </p>
+          </div>
+          <TabNav
+            className={styles.tabs}
+            embedded
+            activeTab={activeTab}
+            counts={counts}
+            onChange={setActiveTab}
+          />
         </div>
         <aside className={styles.sidebar}>
           {asesor && <AsesorCard asesor={asesor} />}
           <BuscadorCTA />
         </aside>
-        <TabNav
-          className={styles.tabs}
-          embedded
-          activeTab={activeTab}
-          counts={counts}
-          onChange={setActiveTab}
-        />
       </header>
 
       <div

@@ -5,25 +5,28 @@
   padding: 32px 24px;
 }
 
-/* PC: título | sidebar
-         tabs  | sidebar  → agente+CTA anclados a la línea inferior. */
+/* PC: título+tabs (juntos, sin hueco) | sidebar anclado a la línea. */
 .topSection {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 280px;
-  grid-template-areas:
-    'title sidebar'
-    'tabs sidebar';
+  grid-template-areas: 'left sidebar';
   column-gap: 24px;
-  row-gap: 12px;
   align-items: stretch;
   margin-bottom: 24px;
   padding-bottom: 0;
   border-bottom: 2px solid var(--border-color);
 }
 
+.leftCol {
+  grid-area: left;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 16px;
+  min-width: 0;
+}
+
 .headerText {
-  grid-area: title;
-  align-self: start;
   min-width: 0;
 }
 
@@ -41,8 +44,6 @@
 }
 
 .tabs {
-  grid-area: tabs;
-  align-self: end;
   min-width: 0;
 }
 
@@ -161,21 +162,31 @@
   }
 
   .topSection {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      'title'
-      'sidebar'
-      'tabs';
-    column-gap: 0;
-    row-gap: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     margin-bottom: 0;
     border-bottom: none;
   }
 
+  /* Aplana la columna para reordenar: título → sidebar → tabs. */
+  .leftCol {
+    display: contents;
+  }
+
+  .headerText {
+    order: 1;
+  }
+
   .sidebar {
+    order: 2;
     width: 100%;
     justify-content: flex-start;
     padding-bottom: 0;
+  }
+
+  .tabs {
+    order: 3;
   }
 
   .mainWrapSplit {
