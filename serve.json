@@ -10,7 +10,7 @@
     },
     {
       "source": "/vitrina-legacy/:token",
-      "destination": "/pages/vitrina.html"
+      "destination": "/react/index.html"
     }
   ]
 }

@@ -1,14 +1,14 @@
-# Cutover vitrina — React oficial
+# Vitrina — React única app
 
 ## Rutas en producción (Vercel)
 
 | URL | App |
 |-----|-----|
 | `/vitrina/{token}` | **React (oficial)** → `/react/index.html` |
-| `/vitrina-react/{token}` | Alias React (mismas pruebas / enlaces viejos) |
-| `/vitrina-legacy/{token}` | Vanilla (rollback de emergencia) |
+| `/vitrina-react/{token}` | Alias React → `/react/index.html` |
+| `/vitrina-legacy/{token}` | Alias React (compat) → `/react/index.html` |
 
-Build: `node scripts/vercel-build.mjs` → `.vercel-out/` (vanilla + React bajo `/react/`).
+Build: `node scripts/vercel-build.mjs` → `.vercel-out/` (`react/` + `index.html` marketing).
 
 Variable opcional en Vercel: `VITE_BACKEND_ORIGIN` (si no se define, el build de producción usa Railway por defecto).
 
@@ -16,14 +16,17 @@ Variable opcional en Vercel: `VITE_BACKEND_ORIGIN` (si no se define, el build de
 
 1. `/vitrina/{token}` → React (favicon, footer, WhatsApp, tabs, detalle)
 2. `/vitrina-react/{token}` → misma app React
-3. `/vitrina-legacy/{token}` → vanilla (solo si hace falta comparar/rollback)
+3. `/vitrina-legacy/{token}` → misma app React (alias)
 4. `/vitrina` sin token → no debe cargar la vitrina de un cliente real
-5. Inmueble “no disponible” → `GET .../recuperar-por-referencia/{id}` (200 o 404; no 500)
+5. `/` → redirect marketing
+6. Inmueble “no disponible” → `GET .../recuperar-por-referencia/{id}` (200 o 404; no 500)
 
-## Rollback rápido
+## Rollback
 
-1. En [`vercel.json`](../vercel.json), volver a apuntar `/vitrina/:token` a `/pages/vitrina.html`
-2. Redeploy, o usar temporalmente `/vitrina-legacy/{token}`
+El vanilla ya no vive en `main`. Para recuperarlo:
+
+1. Redeploy / checkout del tag o branch `archive/vanilla-vitrina`, o
+2. Revert del commit de purge en `main`
 
 ## Backend (Railway) — Wasi
 
@@ -46,4 +49,3 @@ Health: `GET /api/v1/vitrina/health`
 ## Pendiente ops
 
 - Rotar `WASI_TOKEN` en Wasi + Railway (estuvo en historial Git del front).
-- Más adelante: retirar vanilla del repo cuando el rollback ya no sea necesario.

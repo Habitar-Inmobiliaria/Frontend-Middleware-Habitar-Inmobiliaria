@@ -1,7 +1,7 @@
 /**
- * Build de Vercel para cutover paralelo:
+ * Build de Vercel — solo React + index marketing.
  * - Construye la app React (base /react/)
- * - Publica vanilla (pages/js/css/assets/…) + React en .vercel-out/
+ * - Publica React en .vercel-out/react/
  * - Conserva el index.html raíz (redirect marketing)
  *
  * Uso: node scripts/vercel-build.mjs
@@ -49,7 +49,6 @@ mkdirSync(OUT, { recursive: true });
 
 console.log('[vercel-build] instalando deps + build React (base=/react/) …');
 if (process.env.VERCEL) {
-  // En Vercel siempre instalación limpia y reproducible.
   const install = spawnSync('npm', ['ci'], {
     cwd: WEB,
     shell: true,
@@ -73,12 +72,7 @@ if (!existsSync(dist)) {
   process.exit(1);
 }
 
-console.log('[vercel-build] copiando estáticos vanilla …');
-for (const name of ['pages', 'js', 'css', 'assets']) {
-  copyIfExists(join(ROOT, name), join(OUT, name));
-}
 copyIfExists(join(ROOT, 'index.html'), join(OUT, 'index.html'));
-copyIfExists(join(ROOT, 'script.js'), join(OUT, 'script.js'));
 
 console.log('[vercel-build] copiando React → .vercel-out/react/ …');
 mkdirSync(REACT_OUT, { recursive: true });

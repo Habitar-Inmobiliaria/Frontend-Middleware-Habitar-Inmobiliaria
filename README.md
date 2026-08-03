@@ -6,15 +6,17 @@ Permite visualizar inmuebles, cambiar su estado (me interesa / descartado), ver 
 
 ## Versión oficial
 
-La vitrina en producción se sirve con **React** (`web-transition/`):
+La vitrina en producción se sirve solo con **React** (`web-transition/`):
 
 | URL | App |
 |-----|-----|
 | `/vitrina/{token}` | **React (oficial)** |
-| `/vitrina-react/{token}` | Alias React (transición) |
-| `/vitrina-legacy/{token}` | Vanilla (solo rollback) |
+| `/vitrina-react/{token}` | Alias React |
+| `/vitrina-legacy/{token}` | Alias React (compat; ya no es vanilla) |
 
 No existe token por defecto: sin `{token}` en la URL la vitrina no carga datos de un cliente.
+
+El frontend vanilla quedó archivado en el tag/branch `archive/vanilla-vitrina`.
 
 ## Características principales
 
@@ -33,19 +35,16 @@ No existe token por defecto: sin `{token}` en la URL la vitrina no carga datos d
 
 ## Tecnologías
 
-- **Oficial:** React + TypeScript + Vite + React Router + CSS Modules
-- **Legacy (rollback):** HTML / CSS / JavaScript vanilla (`pages/`, `js/`, `css/`)
+- React + TypeScript + Vite + React Router + CSS Modules
 
 ## Estructura del proyecto
 
 ```text
 /
-  web-transition/          # App React (fuente oficial)
-  pages/vitrina.html       # Vanilla (rollback)
-  js/vitrina/vitrina.js
-  css/vitrina/vitrina.css
-  scripts/vercel-build.mjs # Build combinado para Vercel
+  web-transition/          # App React (única fuente)
+  scripts/vercel-build.mjs # Build para Vercel → .vercel-out/
   vercel.json
+  index.html               # Redirect marketing
   docs/cutover-paralelo.md
 ```
 
@@ -72,7 +71,7 @@ Backend local opcional: en `web-transition/.env` definir `VITE_BACKEND_ORIGIN=ht
 node scripts/vercel-build.mjs
 ```
 
-Publica vanilla + React en `.vercel-out/`. Ver [`docs/cutover-paralelo.md`](docs/cutover-paralelo.md).
+Publica React en `.vercel-out/react/` (+ `index.html` marketing). Ver [`docs/cutover-paralelo.md`](docs/cutover-paralelo.md).
 
 ## Endpoints utilizados
 
@@ -103,3 +102,10 @@ Publica vanilla + React en `.vercel-out/`. Ver [`docs/cutover-paralelo.md`](docs
 - No hay `DEFAULT_TOKEN` de cliente real en el frontend.
 - Credenciales Wasi viven solo en el backend (`WASI_TOKEN` / `WASI_ID_COMPANY` en Railway).
 - Pendiente operativo: rotar `WASI_TOKEN` si estuvo expuesto en historial Git antiguo.
+
+## Rollback
+
+Si hace falta recuperar el frontend vanilla:
+
+1. Checkout / redeploy del tag `archive/vanilla-vitrina`, o
+2. Revert del commit de purge en `main`

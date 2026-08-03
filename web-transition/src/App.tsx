@@ -1,15 +1,15 @@
 import { Routes, Route } from 'react-router-dom';
 import VitrinaPage from './pages/VitrinaPage';
 
-// Rutas de la aplicación.
-// Oficial: /vitrina/:token (React).
-// Alias de transición: /vitrina-react/:token (misma app).
-// Rollback: /vitrina-legacy/:token lo sirve el rewrite de Vercel → vanilla.
+// Rutas de la aplicación (todas → React).
+// Oficial: /vitrina/:token
+// Alias: /vitrina-react/:token y /vitrina-legacy/:token (compat)
 export default function App() {
   return (
     <Routes>
       <Route path="/vitrina/:token" element={<VitrinaPage />} />
       <Route path="/vitrina-react/:token" element={<VitrinaPage />} />
+      <Route path="/vitrina-legacy/:token" element={<VitrinaPage />} />
       <Route path="*" element={<RouteNotFound />} />
     </Routes>
   );
