@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useParams } from 'react-router-dom';
 import type { VitrinaInmueble } from '../api/types';
 import { vitrinaApi } from '../api/vitrinaApi';
@@ -32,9 +32,17 @@ import ImportantInfoSidebar, {
 } from '../components/ImportantInfoSidebar/ImportantInfoSidebar';
 import TutorialModal from '../components/TutorialModal/TutorialModal';
 import WhatsAppFloat from '../components/WhatsAppFloat/WhatsAppFloat';
+import VitrinaSkeleton from '../components/VitrinaSkeleton/VitrinaSkeleton';
 import { hasSeenTutorial, markTutorialSeen } from '../utils/tutorial';
 import { tryNotifyVitrinaVisitOnce } from '../utils/visita';
 import { normalizeDisplayText } from '../utils/text';
+import {
+  DELAY_CHILDREN_MS,
+  entranceTotalMs,
+  MIN_SKELETON_MS,
+  SKELETON_EXIT_MS,
+  staggerDelayMs,
+} from '../utils/animations';
 import styles from './VitrinaPage.module.css';
 
 const ERROR_GENERICO = '⚠ Hubo un problema, intenta de nuevo.';
@@ -81,6 +89,15 @@ export default function VitrinaPage() {
   const [successModal, setSuccessModal] = useState(false);
   const [detailTarget, setDetailTarget] = useState<VitrinaInmueble | null>(null);
   const [tutorialOpen, setTutorialOpen] = useState(false);
+  /**
+   * Transición skeleton → contenido (equiv. AnimatePresence mode=wait).
+   * Stagger con rebote solo una vez por carga (`entrancePhase`).
+   */
+  const [bootView, setBootView] = useState<'skeleton' | 'exiting' | 'ready'>('skeleton');
+  /** true mientras corre el stagger; luego queda settled. */
+  const [entrancePhase, setEntrancePhase] = useState<'off' | 'playing' | 'done'>('off');
+  /** Marca el inicio del skeleton para forzar duración mínima. */
+  const skeletonStartedAt = useRef(performance.now());
 
   // Histórico: carga diferida la primera vez que se abre la pestaña.
   const [historicoData, setHistoricoData] = useState<VitrinaInmueble[]>([]);
@@ -98,11 +115,50 @@ export default function VitrinaPage() {
     setInmuebles(data?.inmuebles ?? []);
   }, [data]);
 
-  // Tutorial: se muestra una vez por token tras cargar la vitrina con éxito.
+  // Skeleton mínimo (aunque la API sea instantánea) → luego exit + stagger.
   useEffect(() => {
-    if (loading || error || !data || !token) return;
+    if (loading) {
+      skeletonStartedAt.current = performance.now();
+      setBootView('skeleton');
+      setEntrancePhase('off');
+      return;
+    }
+    if (error) {
+      setBootView('ready');
+      setEntrancePhase('off');
+      return;
+    }
+    if (!data) return;
+
+    const elapsed = performance.now() - skeletonStartedAt.current;
+    const waitMs = Math.max(0, MIN_SKELETON_MS - elapsed);
+    const t = setTimeout(() => {
+      setBootView((prev) => (prev === 'skeleton' ? 'exiting' : prev));
+    }, waitMs);
+    return () => clearTimeout(t);
+  }, [loading, error, data]);
+
+  // mode=wait: tras exit del skeleton, monta contenido y dispara stagger una vez.
+  useEffect(() => {
+    if (bootView !== 'exiting') return;
+    const t = setTimeout(() => {
+      setBootView('ready');
+      setEntrancePhase('playing');
+    }, SKELETON_EXIT_MS);
+    return () => clearTimeout(t);
+  }, [bootView]);
+
+  useEffect(() => {
+    if (entrancePhase !== 'playing') return;
+    const t = setTimeout(() => setEntrancePhase('done'), entranceTotalMs(10));
+    return () => clearTimeout(t);
+  }, [entrancePhase]);
+
+  // Tutorial: tras la entrada staggered, para no tapar la animación.
+  useEffect(() => {
+    if (entrancePhase !== 'done' || loading || error || !data || !token) return;
     if (!hasSeenTutorial(token)) setTutorialOpen(true);
-  }, [loading, error, data, token]);
+  }, [entrancePhase, loading, error, data, token]);
 
   // Notificar visita: fire-and-forget una vez por sesión de navegador.
   useEffect(() => {
@@ -351,15 +407,11 @@ export default function VitrinaPage() {
     return inmuebles.filter((i) => matchesTab(i, activeTab)).reverse();
   }, [activeTab, inmuebles, historicoData, historicoPage, historicoTotalPages]);
 
-  if (loading) {
+  if (bootView === 'skeleton' || bootView === 'exiting') {
     return (
-      <main className={styles.layout}>
-        <div className={styles.state}>Cargando vitrina…</div>
-        <footer className={styles.footer}>
-          <p>&copy; HabitarInmobiliaria 2026</p>
-        </footer>
-        <WhatsAppFloat />
-      </main>
+      <div className={bootView === 'exiting' ? styles.skeletonExit : undefined}>
+        <VitrinaSkeleton />
+      </div>
     );
   }
 
@@ -385,26 +437,42 @@ export default function VitrinaPage() {
     !historicoLoading &&
     historicoData.length > HISTORICO_PAGE_SIZE;
 
+  // Orden: título → tabs → sidebar → cards, uno tras otro con rebote.
+  const playing = entrancePhase === 'playing';
+  const settled = entrancePhase === 'done';
+
+  const enterClass = (kind: 'item' | 'card') => {
+    if (playing) return kind === 'card' ? styles.entranceCard : styles.entranceItem;
+    if (settled) return styles.entranceSettled;
+    return undefined;
+  };
+
+  const enterStyle = (index: number): CSSProperties | undefined =>
+    playing
+      ? { animationDelay: `${DELAY_CHILDREN_MS + staggerDelayMs(index)}ms` }
+      : undefined;
+
   return (
     <main className={styles.layout}>
-      {/* PC: columna izq (título+tabs juntos) | sidebar anclado a la línea. */}
       <header className={styles.topSection}>
         <div className={styles.leftCol}>
-          <div className={styles.headerText}>
+          <div className={`${styles.headerText} ${enterClass('item') ?? ''}`} style={enterStyle(0)}>
             <h1 className={styles.title}>Vitrina Inmobiliaria</h1>
             <p className={styles.subtitle}>
               Revisa las propiedades seleccionadas para ti y gestiona tu interés.
             </p>
           </div>
-          <TabNav
-            className={styles.tabs}
-            embedded
-            activeTab={activeTab}
-            counts={counts}
-            onChange={setActiveTab}
-          />
+          <div className={enterClass('item')} style={enterStyle(1)}>
+            <TabNav
+              className={styles.tabs}
+              embedded
+              activeTab={activeTab}
+              counts={counts}
+              onChange={setActiveTab}
+            />
+          </div>
         </div>
-        <aside className={styles.sidebar}>
+        <aside className={`${styles.sidebar} ${enterClass('item') ?? ''}`} style={enterStyle(2)}>
           {asesor && <AsesorCard asesor={asesor} />}
           <BuscadorCTA />
         </aside>
@@ -419,22 +487,27 @@ export default function VitrinaPage() {
             <p>Cargando histórico…</p>
           </div>
         ) : visibles.length === 0 ? (
-          <div className={styles.state}>
+          <div className={`${styles.state} ${enterClass('item') ?? ''}`} style={enterStyle(3)}>
             <div className={styles.stateTitle}>{emptyCopy.title}</div>
             <p>{emptyCopy.desc}</p>
           </div>
         ) : (
           <section className={styles.grid}>
             {visibles.map((inmueble, index) => (
-              <PropertyCard
+              <div
                 key={getInmuebleKey(inmueble, index)}
-                inmueble={inmueble}
-                activeTab={activeTab}
-                processing={processing.has(getStableId(inmueble))}
-                onAction={handleAction}
-                onOpenDetail={setDetailTarget}
-                onRecovered={handleRecovered}
-              />
+                className={enterClass('card')}
+                style={enterStyle(3 + index)}
+              >
+                <PropertyCard
+                  inmueble={inmueble}
+                  activeTab={activeTab}
+                  processing={processing.has(getStableId(inmueble))}
+                  onAction={handleAction}
+                  onOpenDetail={setDetailTarget}
+                  onRecovered={handleRecovered}
+                />
+              </div>
             ))}
           </section>
         )}

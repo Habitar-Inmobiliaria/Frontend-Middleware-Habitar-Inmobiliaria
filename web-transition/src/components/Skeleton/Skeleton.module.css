@@ -1,0 +1,75 @@
+/* Shimmer reutilizable: barrido con ::after (CSS puro). */
+
+.skeleton {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  flex-shrink: 0;
+  background-color: #e5e7eb;
+  isolation: isolate;
+}
+
+.strong {
+  background-color: #d1d5db;
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.65) 50%,
+    transparent 100%
+  );
+  transform: translateX(-100%);
+  animation: shimmer 1.55s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.r_sm {
+  border-radius: 4px;
+}
+
+.r_md {
+  border-radius: 8px;
+}
+
+.r_lg {
+  border-radius: 12px;
+}
+
+.r_xl {
+  border-radius: 16px;
+}
+
+.r_full {
+  border-radius: 9999px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+    opacity: 0;
+  }
+
+  .skeleton {
+    animation: skeletonPulse 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  @keyframes skeletonPulse {
+    0%,
+    100% {
+      opacity: 0.65;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+}

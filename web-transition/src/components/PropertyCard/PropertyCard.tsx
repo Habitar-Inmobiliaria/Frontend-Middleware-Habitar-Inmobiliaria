@@ -28,6 +28,7 @@ export default function PropertyCard({
   onRecovered,
 }: PropertyCardProps) {
   const [imageFailed, setImageFailed] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   const { unavailable, verifying, displayId, displayLocation } = useUnavailableRecovery({
     inmueble,
@@ -75,10 +76,11 @@ export default function PropertyCard({
       >
         {image && !imageFailed ? (
           <img
-            className={styles.image}
+            className={`${styles.image} ${imageLoaded ? styles.imageReady : styles.imageLoading}`}
             src={image}
             alt={title || 'Propiedad'}
             loading="lazy"
+            onLoad={() => setImageLoaded(true)}
             onError={() => setImageFailed(true)}
           />
         ) : (

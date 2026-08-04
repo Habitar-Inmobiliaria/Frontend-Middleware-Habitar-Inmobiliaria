@@ -31,6 +31,15 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: opacity 250ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.imageLoading {
+  opacity: 0;
+}
+
+.imageReady {
+  opacity: 1;
 }
 
 .priceBadge {
@@ -234,7 +243,17 @@
   }
 }
 
-/* ---- Responsive ---- */
+@media (prefers-reduced-motion: reduce) {
+  .image {
+    transition: none;
+  }
+
+  .imageLoading,
+  .imageReady {
+    opacity: 1;
+  }
+}
+
 @media (max-width: 900px) {
   .card:hover {
     transform: none;
