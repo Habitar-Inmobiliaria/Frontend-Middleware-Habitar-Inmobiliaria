@@ -51,6 +51,11 @@
   margin-top: 0;
 }
 
+.tabsSlot {
+  min-width: 0;
+  width: 100%;
+}
+
 .title {
   font-size: clamp(1.75rem, 3.2vw, 2.55rem);
   font-weight: 800;
@@ -187,7 +192,8 @@
     border-bottom: none;
   }
 
-  /* Aplana la columna para reordenar: título → sidebar → tabs. */
+  /* Aplana leftCol: order en hijos directos del flex.
+     Mobile: título → asesor/CTA → tabs → (luego cards fuera del header). */
   .leftCol {
     display: contents;
   }
@@ -203,8 +209,11 @@
     padding-bottom: 0;
   }
 
-  .tabs {
+  .tabsSlot {
     order: 3;
+  }
+
+  .tabs {
     margin-top: 0;
   }
 
@@ -300,15 +309,15 @@
 /*
   Rebote notorio: entra desde más abajo, sube con overshoot claro, asienta.
 */
-.entranceItem,
-.entranceCard {
-  opacity: 0;
-  will-change: transform, opacity;
-  animation-name: entranceBounce;
-  animation-duration: 700ms;
-  animation-timing-function: cubic-bezier(0.22, 1.4, 0.36, 1);
-  animation-fill-mode: both;
-}
+  .entranceItem,
+  .entranceCard {
+    opacity: 0;
+    will-change: transform, opacity;
+    animation-name: entranceBounce;
+    animation-duration: 580ms;
+    animation-timing-function: cubic-bezier(0.22, 1.4, 0.36, 1);
+    animation-fill-mode: both;
+  }
 
 .entranceCard {
   animation-name: entranceBounceCard;

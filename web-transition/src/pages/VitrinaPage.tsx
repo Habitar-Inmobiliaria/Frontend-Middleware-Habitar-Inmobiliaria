@@ -34,6 +34,7 @@ import TutorialModal from '../components/TutorialModal/TutorialModal';
 import WhatsAppFloat from '../components/WhatsAppFloat/WhatsAppFloat';
 import VitrinaSkeleton from '../components/VitrinaSkeleton/VitrinaSkeleton';
 import { hasSeenTutorial, markTutorialSeen } from '../utils/tutorial';
+import { hasSeenEntrance, markEntranceSeen } from '../utils/entrance';
 import { tryNotifyVitrinaVisitOnce } from '../utils/visita';
 import { normalizeDisplayText } from '../utils/text';
 import {
@@ -77,6 +78,8 @@ const EMPTY_COPY: Record<TabId, { title: string; desc: string }> = {
 export default function VitrinaPage() {
   const { token: rawToken } = useParams<{ token: string }>();
   const token = resolveToken(rawToken);
+  /** Cache local: si ya vio la entrada de este token, no repetir animación. */
+  const skipEntrance = Boolean(token && hasSeenEntrance(token));
   const { data, loading, error } = useVitrina(token);
   const { message: toastMsg, visible: toastVisible, showToast } = useToast();
   const [activeTab, setActiveTab] = useState<TabId>('sin-revisar');
@@ -90,13 +93,15 @@ export default function VitrinaPage() {
   const [detailTarget, setDetailTarget] = useState<VitrinaInmueble | null>(null);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   /**
-   * Transición skeleton → contenido (equiv. AnimatePresence mode=wait).
-   * Stagger con rebote solo una vez por carga (`entrancePhase`).
+   * Transición skeleton → contenido.
+   * skipEntrance: sin stagger; solo skeleton breve mientras llega la API.
    */
-  const [bootView, setBootView] = useState<'skeleton' | 'exiting' | 'ready'>('skeleton');
-  /** true mientras corre el stagger; luego queda settled. */
-  const [entrancePhase, setEntrancePhase] = useState<'off' | 'playing' | 'done'>('off');
-  /** Marca el inicio del skeleton para forzar duración mínima. */
+  const [bootView, setBootView] = useState<'skeleton' | 'exiting' | 'ready'>(() =>
+    skipEntrance ? 'ready' : 'skeleton',
+  );
+  const [entrancePhase, setEntrancePhase] = useState<'off' | 'playing' | 'done'>(() =>
+    skipEntrance ? 'done' : 'off',
+  );
   const skeletonStartedAt = useRef(performance.now());
 
   // Histórico: carga diferida la primera vez que se abre la pestaña.
@@ -115,20 +120,32 @@ export default function VitrinaPage() {
     setInmuebles(data?.inmuebles ?? []);
   }, [data]);
 
-  // Skeleton mínimo (aunque la API sea instantánea) → luego exit + stagger.
+  // Primera visita: skeleton mínimo → exit → stagger.
+  // Recargas (cache): skeleton solo mientras loading; sin animación de entrada.
   useEffect(() => {
     if (loading) {
       skeletonStartedAt.current = performance.now();
-      setBootView('skeleton');
-      setEntrancePhase('off');
+      if (skipEntrance) {
+        setBootView('ready');
+        setEntrancePhase('done');
+      } else {
+        setBootView('skeleton');
+        setEntrancePhase('off');
+      }
       return;
     }
     if (error) {
       setBootView('ready');
-      setEntrancePhase('off');
+      setEntrancePhase(skipEntrance ? 'done' : 'off');
       return;
     }
     if (!data) return;
+
+    if (skipEntrance) {
+      setBootView('ready');
+      setEntrancePhase('done');
+      return;
+    }
 
     const elapsed = performance.now() - skeletonStartedAt.current;
     const waitMs = Math.max(0, MIN_SKELETON_MS - elapsed);
@@ -136,23 +153,29 @@ export default function VitrinaPage() {
       setBootView((prev) => (prev === 'skeleton' ? 'exiting' : prev));
     }, waitMs);
     return () => clearTimeout(t);
-  }, [loading, error, data]);
+  }, [loading, error, data, skipEntrance]);
 
   // mode=wait: tras exit del skeleton, monta contenido y dispara stagger una vez.
   useEffect(() => {
-    if (bootView !== 'exiting') return;
+    if (bootView !== 'exiting' || skipEntrance) return;
     const t = setTimeout(() => {
       setBootView('ready');
       setEntrancePhase('playing');
     }, SKELETON_EXIT_MS);
     return () => clearTimeout(t);
-  }, [bootView]);
+  }, [bootView, skipEntrance]);
 
   useEffect(() => {
     if (entrancePhase !== 'playing') return;
     const t = setTimeout(() => setEntrancePhase('done'), entranceTotalMs(10));
     return () => clearTimeout(t);
   }, [entrancePhase]);
+
+  // Persistir en cache: no volver a animar en próximas recargas de este token.
+  useEffect(() => {
+    if (entrancePhase !== 'done' || !token) return;
+    markEntranceSeen(token);
+  }, [entrancePhase, token]);
 
   // Tutorial: tras la entrada staggered, para no tapar la animación.
   useEffect(() => {
@@ -407,7 +430,8 @@ export default function VitrinaPage() {
     return inmuebles.filter((i) => matchesTab(i, activeTab)).reverse();
   }, [activeTab, inmuebles, historicoData, historicoPage, historicoTotalPages]);
 
-  if (bootView === 'skeleton' || bootView === 'exiting') {
+  // Mientras llega la API (o animación de salida del skeleton).
+  if (loading || bootView === 'skeleton' || bootView === 'exiting') {
     return (
       <div className={bootView === 'exiting' ? styles.skeletonExit : undefined}>
         <VitrinaSkeleton />
@@ -462,7 +486,11 @@ export default function VitrinaPage() {
               Revisa las propiedades seleccionadas para ti y gestiona tu interés.
             </p>
           </div>
-          <div className={enterClass('item')} style={enterStyle(1)}>
+          {/* tabsSlot: order mobile se aplica aquí (no dentro de TabNav). */}
+          <div
+            className={`${styles.tabsSlot} ${enterClass('item') ?? ''}`}
+            style={enterStyle(1)}
+          >
             <TabNav
               className={styles.tabs}
               embedded
