@@ -4,13 +4,23 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
+  background-color: rgba(28, 25, 23, 0.48);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 100;
   padding: 16px;
+}
+
+.overlayOpening {
+  animation: detailOverlayIn 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.overlayClosing {
+  animation: detailOverlayOut 280ms cubic-bezier(0.4, 0, 1, 1) both;
+  pointer-events: none;
 }
 
 .content {
@@ -20,11 +30,111 @@
   max-width: 1300px;
   max-height: 90vh;
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
+  box-shadow:
+    0 24px 48px -12px rgba(28, 25, 23, 0.28),
+    0 8px 16px -6px rgba(28, 25, 23, 0.12);
   overflow: hidden;
   display: flex;
   flex-direction: column;
   border: 1px solid var(--border-color);
+  transform-origin: center center;
+}
+
+.contentOpening {
+  animation: detailPanelIn 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.contentClosing {
+  animation: detailPanelOut 260ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+/* Apertura cálida: sube suave y se asienta (solo opacity + transform). */
+@keyframes detailOverlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes detailOverlayOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes detailPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(22px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes detailPanelOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+}
+
+/* En móvil: entrada tipo sheet desde abajo, más natural al tocar. */
+@media (max-width: 768px) {
+  .contentOpening {
+    animation-name: detailPanelInMobile;
+    animation-duration: 520ms;
+  }
+
+  .contentClosing {
+    animation-name: detailPanelOutMobile;
+  }
+}
+
+@keyframes detailPanelInMobile {
+  from {
+    opacity: 0;
+    transform: translateY(36px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes detailPanelOutMobile {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(28px) scale(0.99);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlayOpening,
+  .overlayClosing,
+  .contentOpening,
+  .contentClosing {
+    animation-duration: 120ms;
+  }
+
+  .contentOpening,
+  .contentClosing {
+    transform: none;
+  }
 }
 
 .close {

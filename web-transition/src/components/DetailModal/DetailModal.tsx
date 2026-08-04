@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import type { PropertyDetail, VitrinaInmueble } from '../../api/types';
 import type { TabId } from '../../utils/estado';
 import type { CardAccion } from '../ActionBar/ActionBar';
@@ -37,6 +37,26 @@ export default function DetailModal({
 }: DetailModalProps) {
   const { data, loading, error } = usePropertyDetail(token, inmueble);
   const [processing, setProcessing] = useState(false);
+  const [closing, setClosing] = useState(false);
+
+  const requestClose = useCallback(() => {
+    if (closing) return;
+    const reduce =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) {
+      onClose();
+      return;
+    }
+    setClosing(true);
+  }, [closing, onClose]);
+
+  // Tras la animación de salida, desmonta el modal.
+  useEffect(() => {
+    if (!closing) return;
+    const t = window.setTimeout(() => onClose(), 280);
+    return () => window.clearTimeout(t);
+  }, [closing, onClose]);
 
   // Bloquea el scroll de fondo mientras el modal está abierto.
   useEffect(() => {
@@ -50,17 +70,17 @@ export default function DetailModal({
   // Cierre con tecla Escape.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') requestClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [requestClose]);
 
   async function runAction(accion: CardAccion) {
-    if (processing) return;
+    if (processing || closing) return;
     setProcessing(true);
     const ok = await onAction(inmueble, accion);
-    if (ok) onClose();
+    if (ok) requestClose();
     else setProcessing(false);
   }
 
@@ -89,13 +109,23 @@ export default function DetailModal({
 
   return (
     <div
-      className={styles.overlay}
+      className={`${styles.overlay} ${closing ? styles.overlayClosing : styles.overlayOpening}`}
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget) requestClose();
       }}
     >
-      <div className={styles.content} role="dialog" aria-modal="true">
-        <button type="button" className={styles.close} aria-label="Cerrar detalle" onClick={onClose}>
+      <div
+        className={`${styles.content} ${closing ? styles.contentClosing : styles.contentOpening}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Detalle del inmueble"
+      >
+        <button
+          type="button"
+          className={styles.close}
+          aria-label="Cerrar detalle"
+          onClick={requestClose}
+        >
           ✕
         </button>
         <div className={styles.body}>{content}</div>
