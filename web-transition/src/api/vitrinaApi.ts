@@ -40,7 +40,7 @@ import type {
   VitrinaInmueble,
   VitrinaResponse,
 } from './types';
-import { isUsefulRecoveredPropertyPayload } from '../utils/recovery';
+import { isUsefulRecoveredPropertyPayload, mergeDetailWithListProp } from '../utils/recovery';
 
 export { markExternallyRecoveredReference, wasExternallyRecoveredByReferencia };
 
@@ -332,12 +332,21 @@ export const vitrinaApi = {
     }
 
     if (isUsefulPropertyDetail(data)) {
-      detailCache.set(cacheKey, data!);
-      detailCache.set(wasiId, data!);
-      return data;
+      const merged = mergeDetailWithListProp(data, listProp) ?? data!;
+      detailCache.set(cacheKey, merged);
+      detailCache.set(wasiId, merged);
+      return merged;
     }
 
-    // Detalle vacío o fallido: recuperar por referencia (Wasi → n8n).
+    // Detalle vacío o fallido: si el listado ya trae datos (n8n/middleware), úsalos.
+    const fromList = mergeDetailWithListProp(null, listProp);
+    if (fromList && isUsefulPropertyDetail(fromList)) {
+      detailCache.set(cacheKey, fromList);
+      detailCache.set(wasiId, fromList);
+      return fromList;
+    }
+
+    // Sin datos en listado: recuperar por referencia (Wasi → n8n).
     const seed: VitrinaInmueble = listProp
       ? { ...listProp }
       : {
@@ -355,13 +364,19 @@ export const vitrinaApi = {
     }
 
     const recovered = readUsefulCache();
-    if (recovered) return recovered;
+    if (recovered) {
+      const merged = mergeDetailWithListProp(recovered, listProp) ?? recovered;
+      detailCache.set(cacheKey, merged);
+      detailCache.set(wasiId, merged);
+      return merged;
+    }
 
-    // Último recurso: devolver lo que vino de la API (aunque esté vacío).
-    if (data) {
-      detailCache.set(cacheKey, data);
-      detailCache.set(wasiId, data);
-      return data;
+    // Último recurso: devolver API vacía fusionada con listado si hay algo.
+    const fallback = mergeDetailWithListProp(data, listProp) ?? data;
+    if (fallback) {
+      detailCache.set(cacheKey, fallback);
+      detailCache.set(wasiId, fallback);
+      return fallback;
     }
     return undefined;
   },

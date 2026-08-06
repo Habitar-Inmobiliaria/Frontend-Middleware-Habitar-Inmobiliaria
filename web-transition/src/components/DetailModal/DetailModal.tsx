@@ -6,7 +6,7 @@ import { wasExternallyRecoveredByReferencia } from '../../api/recoveryApi';
 import { usePropertyDetail } from '../../hooks/usePropertyDetail';
 import { extractPropertyIdFromUrl, getDisplayPropertyId } from '../../utils/property';
 import { looksLikeHtml, sanitizeDescriptionHtml } from '../../utils/html';
-import { prepareDetailForDisplay } from '../../utils/recovery';
+import { prepareDetailForDisplay, mergeDetailWithListProp } from '../../utils/recovery';
 import Gallery from './Gallery';
 import VideoSection from './VideoSection';
 import MapSection from './MapSection';
@@ -95,7 +95,9 @@ export default function DetailModal({
   } else if (error || !data) {
     content = <div className={styles.error}>{error || 'Error cargando el detalle del inmueble.'}</div>;
   } else {
-    const prepared = prepareDetailForDisplay(data, inmueble, wasExternallyRecoveredByReferencia) ?? data;
+    const merged = mergeDetailWithListProp(data, inmueble) ?? data;
+    const prepared =
+      prepareDetailForDisplay(merged, inmueble, wasExternallyRecoveredByReferencia) ?? merged;
     content = (
       <DetailContent
         detail={prepared}
@@ -146,7 +148,15 @@ interface DetailContentProps {
 }
 
 function DetailContent({ detail: d, inmueble, activeTab, processing, onAction }: DetailContentProps) {
-  const images = Array.isArray(d.galeriasImagenes) ? d.galeriasImagenes : [];
+  const imagesRaw = Array.isArray(d.galeriasImagenes)
+    ? d.galeriasImagenes
+    : Array.isArray(d.imagenes)
+      ? d.imagenes
+      : [];
+  const listImg = inmueble.imagenUrl || inmueble.imagenPrincipal;
+  const images =
+    imagesRaw.length > 0 ? imagesRaw : listImg ? [listImg] : [];
+
   const isLocationRestricted = Boolean(
     d._locationRestricted ||
       inmueble._locationRestricted ||
@@ -161,6 +171,11 @@ function DetailContent({ detail: d, inmueble, activeTab, processing, onAction }:
       '',
   ).trim();
 
+  const titulo = d.titulo || inmueble.titulo || '';
+  const areaConstruida = d.areaConstruida || inmueble.area;
+  const banos = d.banos || inmueble.banos;
+  const habitaciones = d.habitaciones || inmueble.habitaciones;
+
   const allSpecRows: Array<[string, string | undefined]> = [
     ['ID inmueble', detailPropertyId],
     ['Tipo de negocio', d.tipoNegocio],
@@ -174,10 +189,10 @@ function DetailContent({ detail: d, inmueble, activeTab, processing, onAction }:
       : []),
     ['Estrato', d.estrato],
     ['Piso', d.piso],
-    ['Habitaciones', d.habitaciones],
-    ['Baños', d.banos],
+    ['Habitaciones', habitaciones],
+    ['Baños', banos],
     ['Estacionamiento', d.estacionamiento],
-    ['Área Construida', d.areaConstruida],
+    ['Área Construida', areaConstruida],
     ['Área Terreno', d.areaTerreno],
     ['Área Privada', d.areaPrivada],
     ['Estado físico', d.estadoFisico ? ESTADO_FISICO[d.estadoFisico] ?? d.estadoFisico : undefined],
@@ -186,19 +201,19 @@ function DetailContent({ detail: d, inmueble, activeTab, processing, onAction }:
   ];
   const specRows = allSpecRows.filter(([, v]) => isMeaningful(v));
 
-  const descripcion = d.descripcion || d.observaciones || d.descripcionCorta;
+  const descripcion = d.descripcion || d.observaciones || d.descripcionCorta || inmueble.descripcionCorta;
 
   return (
     <>
       <div className={styles.twoCol}>
         <div className={styles.galleryCol}>
-          <Gallery images={images} title={d.titulo ?? ''} />
+          <Gallery images={images} title={titulo} />
           <VideoSection video={d.video} />
         </div>
 
         <div className={styles.specsCol}>
-          <h2 className={styles.title}>{d.titulo ?? ''}</h2>
-          <PriceBlock detail={d} />
+          <h2 className={styles.title}>{titulo}</h2>
+          <PriceBlock detail={{ ...d, precioFormateado: d.precioFormateado || inmueble.precioFormateado }} />
           <div className={styles.specList}>
             {specRows.map(([label, value]) => (
               <div className={styles.specRow} key={label}>
@@ -263,6 +278,13 @@ function CheckList({ items }: { items: string[] }) {
 // Bloque de precio; soporta precio dual "Venta: ... | Alquiler: ...".
 function PriceBlock({ detail: d }: { detail: PropertyDetail }) {
   const raw = d.precioFormateado || '';
+  if (!raw.trim()) {
+    return (
+      <div className={styles.priceBlock}>
+        <div className={styles.price}>Consultar precio</div>
+      </div>
+    );
+  }
 
   if (raw.includes('|')) {
     const cards = raw.split('|').map((part) => {
@@ -288,13 +310,23 @@ function PriceBlock({ detail: d }: { detail: PropertyDetail }) {
     );
   }
 
+  const negocio =
+    normalizeTipoNegocio(d.tipoNegocio) ||
+    (/mensual|alquiler|arriendo|renta/i.test(raw) ? 'alquiler' : '');
+
   return (
     <div className={styles.priceBlock}>
-      <small>Precio de {(d.tipoNegocio || '').toLowerCase()}</small>
+      {negocio ? <small>Precio de {negocio}</small> : <small>Precio</small>}
       <div className={styles.price}>{raw}</div>
       <small>Pesos Colombianos</small>
     </div>
   );
+}
+
+function normalizeTipoNegocio(value: string | undefined): string {
+  const t = String(value || '').trim().toLowerCase();
+  if (!t || t === 'no especificado' || t === 'n/a') return '';
+  return t;
 }
 
 // Pie con acciones según pestaña; oculto en Visitados/Histórico.

@@ -131,6 +131,97 @@ export function hasUsableListingContent(
   return false;
 }
 
+/**
+ * Arma un detalle usable a partir del ítem de listado (p. ej. enriquecido
+ * por n8n en el GET vitrina). El modal suele pedir /inmuebles/{id} a Wasi
+ * y recibe vacío; sin esto se pierde título/precio/imagen de la card.
+ */
+export function hydrateDetailFromListProp(
+  listProp: VitrinaInmueble | null | undefined,
+): PropertyDetail | null {
+  if (!listProp) return null;
+  const titulo = normalizeDisplayText(listProp.titulo);
+  const precio = normalizeDisplayText(listProp.precioFormateado);
+  const img = normalizeImageUrl(listProp.imagenUrl || listProp.imagenPrincipal);
+  const desc = normalizeDisplayText(listProp.descripcionCorta);
+  const area = normalizeDisplayText(listProp.area);
+  const banos = normalizeDisplayText(listProp.banos);
+  const habitaciones = normalizeDisplayText(listProp.habitaciones);
+  const ubicacion = normalizeDisplayText(listProp.ubicacion);
+  const id = getDisplayPropertyId(listProp) || normalizeDisplayText(listProp.id);
+
+  if (!titulo && !precio && !img && !desc) return null;
+
+  const images = img ? [img] : [];
+  const looksExternal = !ubicacion || Boolean(listProp._externalDataSource);
+
+  return {
+    id: id || undefined,
+    codigoIdentificador: id || undefined,
+    titulo: titulo || undefined,
+    precioFormateado: precio || undefined,
+    ubicacion: ubicacion || undefined,
+    descripcionCorta: desc || undefined,
+    descripcion: desc || undefined,
+    habitaciones: habitaciones || undefined,
+    banos: banos || undefined,
+    areaConstruida: area || undefined,
+    galeriasImagenes: images,
+    imagenes: images,
+    url: listProp.url || listProp.urlReferencia || undefined,
+    urlReferencia: listProp.urlReferencia || listProp.url || undefined,
+    tipoNegocio: /mensual|alquiler|arriendo|renta/i.test(precio) ? 'Alquiler' : undefined,
+    _externalDataSource: looksExternal || undefined,
+    _locationRestricted: looksExternal || listProp._locationRestricted || undefined,
+  };
+}
+
+/**
+ * Combina detalle de API con datos del listado: rellena huecos sin pisar
+ * campos útiles del GET detalle.
+ */
+export function mergeDetailWithListProp(
+  detail: PropertyDetail | null | undefined,
+  listProp: VitrinaInmueble | null | undefined,
+): PropertyDetail | null {
+  const fromList = hydrateDetailFromListProp(listProp);
+  if (!detail && !fromList) return null;
+  if (!detail) return fromList;
+  if (!fromList) return detail;
+
+  const pick = (a: string | undefined, b: string | undefined) =>
+    normalizeDisplayText(a) || normalizeDisplayText(b) || undefined;
+
+  const apiImages = Array.isArray(detail.galeriasImagenes)
+    ? detail.galeriasImagenes.map((u) => normalizeImageUrl(u)).filter(Boolean)
+    : Array.isArray(detail.imagenes)
+      ? detail.imagenes.map((u) => normalizeImageUrl(u)).filter(Boolean)
+      : [];
+  const listImages = fromList.galeriasImagenes || [];
+  const images = apiImages.length > 0 ? apiImages : listImages;
+
+  return {
+    ...fromList,
+    ...detail,
+    titulo: pick(detail.titulo, fromList.titulo),
+    precioFormateado: pick(detail.precioFormateado, fromList.precioFormateado),
+    ubicacion: pick(detail.ubicacion, fromList.ubicacion),
+    descripcionCorta: pick(detail.descripcionCorta, fromList.descripcionCorta),
+    descripcion: pick(detail.descripcion, fromList.descripcion),
+    habitaciones: pick(detail.habitaciones, fromList.habitaciones),
+    banos: pick(detail.banos, fromList.banos),
+    areaConstruida: pick(detail.areaConstruida, fromList.areaConstruida),
+    tipoNegocio: pick(detail.tipoNegocio, fromList.tipoNegocio),
+    tipoInmueble: pick(detail.tipoInmueble, fromList.tipoInmueble),
+    url: pick(detail.url, fromList.url),
+    urlReferencia: pick(detail.urlReferencia, fromList.urlReferencia),
+    galeriasImagenes: images,
+    imagenes: images,
+    _externalDataSource: detail._externalDataSource || fromList._externalDataSource,
+    _locationRestricted: detail._locationRestricted || fromList._locationRestricted,
+  };
+}
+
 export function normalizeWasiProbePayload(payload: unknown): RecoveredPropertyPayload | null {
   if (!payload) return null;
 
