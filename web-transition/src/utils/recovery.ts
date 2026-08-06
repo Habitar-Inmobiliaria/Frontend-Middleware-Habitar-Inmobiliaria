@@ -111,7 +111,8 @@ export function isUnavailablePropertyView(
 
 /**
  * Contenido suficiente para mostrar una tarjeta usable (no el shell
- * "Inmueble no disponible"). Incluye título/precio tras recuperación Wasi/n8n.
+ * "Inmueble no disponible"). Requiere datos reales: imagen/ubicación/
+ * descripción, o título/precio. Un flag _externalDataSource vacío NO cuenta.
  */
 export function hasUsableListingContent(
   prop: VitrinaInmueble | null | undefined,
@@ -127,7 +128,6 @@ export function hasUsableListingContent(
   const price = normalizeDisplayText(prop.precioFormateado);
   if (title) return true;
   if (price && !/^\$?\s*0+([.,]0+)?$/.test(price)) return true;
-  if (prop._externalDataSource || prop._fromHistorico) return true;
   return false;
 }
 
@@ -136,43 +136,118 @@ export function normalizeWasiProbePayload(payload: unknown): RecoveredPropertyPa
 
   if (Array.isArray(payload)) {
     const first = payload[0];
-    if (first && typeof first === 'object') return first as RecoveredPropertyPayload;
+    if (first && typeof first === 'object') {
+      const normalized = first as RecoveredPropertyPayload;
+      return isUsefulRecoveredPropertyPayload(normalized) ? normalized : null;
+    }
+    return null;
   }
 
   if (typeof payload !== 'object') return null;
   const obj = payload as Record<string, unknown>;
 
   if (Array.isArray(obj.data) && obj.data.length > 0) {
-    return obj.data[0] as RecoveredPropertyPayload;
+    const normalized = obj.data[0] as RecoveredPropertyPayload;
+    return isUsefulRecoveredPropertyPayload(normalized) ? normalized : null;
+  }
+  if (obj.data && typeof obj.data === 'object' && !Array.isArray(obj.data)) {
+    const normalized = obj.data as RecoveredPropertyPayload;
+    return isUsefulRecoveredPropertyPayload(normalized) ? normalized : null;
   }
   if (Array.isArray(obj.results) && obj.results.length > 0) {
-    return obj.results[0] as RecoveredPropertyPayload;
+    const normalized = obj.results[0] as RecoveredPropertyPayload;
+    return isUsefulRecoveredPropertyPayload(normalized) ? normalized : null;
   }
   if (obj.property && typeof obj.property === 'object') {
-    return obj.property as RecoveredPropertyPayload;
+    const normalized = obj.property as RecoveredPropertyPayload;
+    return isUsefulRecoveredPropertyPayload(normalized) ? normalized : null;
   }
   if (obj.inmueble && typeof obj.inmueble === 'object') {
-    return obj.inmueble as RecoveredPropertyPayload;
+    const normalized = obj.inmueble as RecoveredPropertyPayload;
+    return isUsefulRecoveredPropertyPayload(normalized) ? normalized : null;
   }
-  if (!Array.isArray(payload)) return obj as RecoveredPropertyPayload;
+  if (isUsefulRecoveredPropertyPayload(obj)) return obj as RecoveredPropertyPayload;
   return null;
+}
+
+/** Extrae URL de imagen desde string u objeto típico de Wasi/galerías. */
+function coerceImageUrl(value: unknown): string {
+  if (!value) return '';
+  if (typeof value === 'string') return normalizeDisplayText(value);
+  if (typeof value === 'object' && value !== null) {
+    const o = value as Record<string, unknown>;
+    return normalizeDisplayText(
+      String(o.url ?? o.src ?? o.archivo ?? o.imagen ?? o.image ?? o.ruta ?? ''),
+    );
+  }
+  return '';
+}
+
+function collectGalleryUrls(data: RecoveredPropertyPayload): string[] {
+  const buckets = [
+    data.galeriasImagenes,
+    data.imagenes,
+    data.galleries,
+    data.gallery,
+    data.photos,
+    data.fotos,
+  ];
+  const urls: string[] = [];
+  for (const bucket of buckets) {
+    if (!Array.isArray(bucket)) continue;
+    for (const item of bucket) {
+      const url = coerceImageUrl(item);
+      if (url) urls.push(url);
+    }
+  }
+  return urls;
 }
 
 /** Tras recuperación: al menos título, descripción, imagen o precio útil. */
 export function isUsefulRecoveredPropertyPayload(data: unknown): boolean {
   if (!data || typeof data !== 'object') return false;
   const d = data as RecoveredPropertyPayload;
-  const title = normalizeDisplayText(String(d.titulo ?? d.title ?? d.nombre ?? ''));
-  const description = normalizeDisplayText(
-    String(d.descripcionCorta ?? d.observaciones ?? d.descripcion ?? d.description ?? ''),
+  const title = normalizeDisplayText(
+    String(d.titulo ?? d.title ?? d.nombre ?? d.name ?? d.id_property_title ?? ''),
   );
-  const galerias = Array.isArray(d.galeriasImagenes) ? d.galeriasImagenes : [];
-  const imagenes = Array.isArray(d.imagenes) ? d.imagenes : [];
+  const description = normalizeDisplayText(
+    String(
+      d.descripcionCorta ??
+        d.observaciones ??
+        d.descripcion ??
+        d.description ??
+        d.obs ??
+        d.comment ??
+        '',
+    ),
+  );
+  const gallery = collectGalleryUrls(d);
   const image = normalizeDisplayText(
-    String(d.imagenUrl ?? d.imagen_principal ?? d.imagen ?? d.foto ?? galerias[0] ?? imagenes[0] ?? ''),
+    String(
+      d.imagenUrl ??
+        d.imagen_principal ??
+        d.main_image ??
+        d.mainImage ??
+        d.imagen ??
+        d.foto ??
+        d.image ??
+        d.photo ??
+        gallery[0] ??
+        '',
+    ),
   );
   const price = normalizeDisplayText(
-    String(d.precioFormateado ?? d.precio_formateado ?? d.precio ?? ''),
+    String(
+      d.precioFormateado ??
+        d.precio_formateado ??
+        d.precio ??
+        d.price ??
+        d.iso_price ??
+        d.rent_price ??
+        d.sale_price ??
+        d.price_total ??
+        '',
+    ),
   );
   return Boolean(title || description || image || price);
 }
@@ -248,10 +323,17 @@ export function unwrapN8nScrapeCacheEntry(entry: unknown): N8nScrapeResult {
 }
 
 function pickImage(data: RecoveredPropertyPayload): string {
-  const galerias = Array.isArray(data.galeriasImagenes) ? data.galeriasImagenes : [];
-  const imagenes = Array.isArray(data.imagenes) ? data.imagenes : [];
-  return normalizeDisplayText(
-    String(data.imagenUrl ?? data.imagen_principal ?? data.imagen ?? data.foto ?? galerias[0] ?? imagenes[0] ?? ''),
+  const gallery = collectGalleryUrls(data);
+  return (
+    coerceImageUrl(data.imagenUrl) ||
+    coerceImageUrl(data.imagen_principal) ||
+    coerceImageUrl(data.main_image) ||
+    coerceImageUrl(data.mainImage) ||
+    coerceImageUrl(data.imagen) ||
+    coerceImageUrl(data.foto) ||
+    coerceImageUrl(data.image) ||
+    gallery[0] ||
+    ''
   );
 }
 
@@ -260,21 +342,52 @@ export function applyWasiProbeDataToProperty(
   prop: VitrinaInmueble,
   data: RecoveredPropertyPayload,
 ): VitrinaInmueble {
-  const nextTitle = normalizeDisplayText(String(data.titulo ?? data.title ?? data.nombre ?? ''));
+  const nextTitle = normalizeDisplayText(
+    String(data.titulo ?? data.title ?? data.nombre ?? data.name ?? data.id_property_title ?? ''),
+  );
   const nextLocation = normalizeDisplayText(
-    String(data.ubicacion ?? data.location ?? data.ciudad ?? ''),
+    String(
+      data.ubicacion ??
+        data.location ??
+        data.ciudad ??
+        data.city ??
+        data.city_label ??
+        data.city_name ??
+        '',
+    ),
   );
   const nextDescription = normalizeDisplayText(
-    String(data.descripcionCorta ?? data.observaciones ?? data.descripcion ?? data.description ?? ''),
+    String(
+      data.descripcionCorta ??
+        data.observaciones ??
+        data.descripcion ??
+        data.description ??
+        data.obs ??
+        data.comment ??
+        '',
+    ),
   );
   const nextImage = pickImage(data);
-  const nextPrice = normalizeDisplayText(
-    String(data.precioFormateado ?? data.precio_formateado ?? data.precio ?? ''),
-  );
+  const rawPrice =
+    data.precioFormateado ??
+    data.precio_formateado ??
+    data.precio ??
+    data.price ??
+    data.iso_price ??
+    data.rent_price ??
+    data.sale_price ??
+    data.price_total ??
+    '';
+  let nextPrice = normalizeDisplayText(String(rawPrice));
+  if (nextPrice && !/^\$/.test(nextPrice) && /^\d/.test(nextPrice)) {
+    const n = Number(String(rawPrice).replace(/[^\d.]/g, ''));
+    if (Number.isFinite(n) && n > 0) nextPrice = `$${n.toLocaleString('es-CO')}`;
+  }
   const nextUrl = normalizeDisplayText(String(data.urlReferencia ?? data.url ?? data.link ?? ''));
 
   const next: VitrinaInmueble = { ...prop };
   if (nextTitle) next.titulo = nextTitle;
+  // Si ya venía restringida la ubicación, no reponer texto de dirección.
   if (!prop._locationRestricted && nextLocation) next.ubicacion = nextLocation;
   if (nextDescription) next.descripcionCorta = nextDescription;
   if (nextImage) next.imagenUrl = nextImage;
@@ -303,23 +416,52 @@ export function buildRecoveredDetailForCache(
   { locationRestricted = false }: { locationRestricted?: boolean } = {},
 ): { detail: PropertyDetail; keys: string[] } | null {
   const normalizedData = normalizeWasiProbePayload(data);
-  if (!normalizedData || !prop) return null;
+  if (!normalizedData || !prop || !isUsefulRecoveredPropertyPayload(normalizedData)) return null;
 
   const isLocationRestricted = Boolean(locationRestricted || prop._locationRestricted);
-  const galerias = Array.isArray(normalizedData.galeriasImagenes)
-    ? (normalizedData.galeriasImagenes as string[])
-    : Array.isArray(normalizedData.imagenes)
-      ? (normalizedData.imagenes as string[])
-      : [];
-  const imagenes = Array.isArray(normalizedData.imagenes)
-    ? (normalizedData.imagenes as string[])
-    : galerias;
+  const galleryUrls = collectGalleryUrls(normalizedData);
+  const mainImage = pickImage(normalizedData);
+  const galerias = galleryUrls.length > 0 ? galleryUrls : mainImage ? [mainImage] : [];
+  const imagenes = galerias;
+
+  const titulo = normalizeDisplayText(
+    String(
+      normalizedData.titulo ??
+        normalizedData.title ??
+        normalizedData.nombre ??
+        normalizedData.name ??
+        prop.titulo ??
+        '',
+    ),
+  );
+  const descripcionCorta = normalizeDisplayText(
+    String(
+      normalizedData.descripcionCorta ??
+        normalizedData.observaciones ??
+        normalizedData.descripcion ??
+        normalizedData.description ??
+        prop.descripcionCorta ??
+        '',
+    ),
+  );
+  let precioFormateado = normalizeDisplayText(
+    String(
+      normalizedData.precioFormateado ??
+        normalizedData.precio_formateado ??
+        normalizedData.precio ??
+        normalizedData.price ??
+        prop.precioFormateado ??
+        '',
+    ),
+  );
+  if (precioFormateado && !/^\$/.test(precioFormateado) && /^\d/.test(precioFormateado)) {
+    const n = Number(String(precioFormateado).replace(/[^\d.]/g, ''));
+    if (Number.isFinite(n) && n > 0) precioFormateado = `$${n.toLocaleString('es-CO')}`;
+  }
 
   let mergedDetail: PropertyDetail = {
     ...(normalizedData as PropertyDetail),
-    titulo: normalizeDisplayText(
-      String(normalizedData.titulo ?? normalizedData.title ?? normalizedData.nombre ?? prop.titulo ?? ''),
-    ),
+    titulo,
     ubicacion: isLocationRestricted
       ? ''
       : normalizeDisplayText(
@@ -331,16 +473,7 @@ export function buildRecoveredDetailForCache(
               '',
           ),
         ),
-    descripcionCorta: normalizeDisplayText(
-      String(
-        normalizedData.descripcionCorta ??
-          normalizedData.observaciones ??
-          normalizedData.descripcion ??
-          normalizedData.description ??
-          prop.descripcionCorta ??
-          '',
-      ),
-    ),
+    descripcionCorta,
     zona: isLocationRestricted ? '' : normalizeDisplayText(String(normalizedData.zona ?? '')),
     direccion: isLocationRestricted
       ? ''
@@ -350,14 +483,8 @@ export function buildRecoveredDetailForCache(
     map: String(normalizedData.map ?? ''),
     id_publish_on_map: (normalizedData.id_publish_on_map as number | null | undefined) ?? null,
     _locationRestricted: isLocationRestricted,
-    precioFormateado: normalizeDisplayText(
-      String(
-        normalizedData.precioFormateado ??
-          normalizedData.precio_formateado ??
-          prop.precioFormateado ??
-          '',
-      ),
-    ),
+    _externalDataSource: true,
+    precioFormateado,
     urlReferencia: normalizeDisplayText(
       String(
         normalizedData.urlReferencia ??

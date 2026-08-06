@@ -10,7 +10,7 @@ interface UsePropertyDetailState {
 }
 
 // Carga el detalle de un inmueble cuando `inmueble` deja de ser null.
-// La API ya cachea por id y cancela peticiones previas.
+// Prefiere el id visible (referencia Wasi) y pasa el listProp para recuperación.
 export function usePropertyDetail(
   token: string,
   inmueble: VitrinaInmueble | null,
@@ -27,7 +27,7 @@ export function usePropertyDetail(
       return;
     }
 
-    const detailId = inmueble.id || getDisplayPropertyId(inmueble);
+    const detailId = getDisplayPropertyId(inmueble) || String(inmueble.id || '').trim();
     let cancelled = false;
 
     setLoading(true);
@@ -35,7 +35,7 @@ export function usePropertyDetail(
     setData(null);
 
     vitrinaApi
-      .getPropertyDetail(token, detailId, { cancelPrevious: true })
+      .getPropertyDetail(token, detailId, { cancelPrevious: true, listProp: inmueble })
       .then((d) => {
         if (cancelled) return;
         if (d) setData(d);

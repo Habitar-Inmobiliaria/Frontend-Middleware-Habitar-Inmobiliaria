@@ -13,6 +13,7 @@ import {
   applyWasiProbeDataToProperty,
   buildRecoveredDetailForCache,
   hasUsableListingContent,
+  isUsefulRecoveredPropertyPayload,
   normalizeWasiProbePayload,
   parseN8nScrapeResponseBody,
   unwrapN8nScrapeCacheEntry,
@@ -216,21 +217,22 @@ export async function tryRecoverUnavailableProperty(
     });
 
   const probeData = await getWasiPropertyByReferencia(ref);
-  if (probeData) {
+  if (probeData && isUsefulRecoveredPropertyPayload(probeData)) {
     markExternallyRecoveredReference(ref);
-    let next = applyLocationRestrictionToProperty(prop, markExternallyRecoveredReference);
-    next = applyWasiProbeDataToProperty(next, probeData);
+    // Primero datos útiles, luego restricción de ubicación (privacidad).
+    let next = applyWasiProbeDataToProperty(prop, probeData);
+    next = applyLocationRestrictionToProperty(next, markExternallyRecoveredReference);
     cacheRecoveredDetail(next, probeData, ref, { locationRestricted: true });
     if (!stillUnavailable(next)) return next;
   }
 
   const scrapeResult = await scrapeInmuebleByReferencia(ref);
   const scrapeData = scrapeResult?.data || null;
-  if (!scrapeData) return null;
+  if (!scrapeData || !isUsefulRecoveredPropertyPayload(scrapeData)) return null;
 
   markExternallyRecoveredReference(ref);
-  let next = applyLocationRestrictionToProperty(prop, markExternallyRecoveredReference);
-  next = applyWasiProbeDataToProperty(next, scrapeData);
+  let next = applyWasiProbeDataToProperty(prop, scrapeData);
+  next = applyLocationRestrictionToProperty(next, markExternallyRecoveredReference);
   cacheRecoveredDetail(next, scrapeData, ref, { locationRestricted: true });
   if (!stillUnavailable(next)) return next;
   return null;

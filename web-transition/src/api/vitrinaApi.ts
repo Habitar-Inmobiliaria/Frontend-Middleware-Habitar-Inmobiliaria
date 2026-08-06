@@ -25,6 +25,7 @@ import { handleApiError } from './errors';
 import {
   bindDetailCache,
   markExternallyRecoveredReference,
+  tryRecoverUnavailableProperty,
   wasExternallyRecoveredByReferencia,
 } from './recoveryApi';
 import type {
@@ -36,10 +37,17 @@ import type {
   NotificarVisitaPayload,
   PropertyDetail,
   VitrinaFetchResult,
+  VitrinaInmueble,
   VitrinaResponse,
 } from './types';
+import { isUsefulRecoveredPropertyPayload } from '../utils/recovery';
 
 export { markExternallyRecoveredReference, wasExternallyRecoveredByReferencia };
+
+function isUsefulPropertyDetail(detail: PropertyDetail | null | undefined): boolean {
+  if (!detail) return false;
+  return isUsefulRecoveredPropertyPayload(detail);
+}
 
 // ------------------------------------------------------------
 // Caché de sesión del último 200 válido (por token)
@@ -260,16 +268,29 @@ export const vitrinaApi = {
   /**
    * GET del detalle de un inmueble. IDs numéricos van al backend de vitrina;
    * el resto se trata como inmueble privado (ubicación restringida).
+   * Si la API/caché devuelve un detalle vacío, intenta recuperación Wasi/n8n.
    */
   async getPropertyDetail(
     token: string,
     wasiId: string,
-    options: { cancelPrevious?: boolean } = {},
+    options: { cancelPrevious?: boolean; listProp?: VitrinaInmueble | null } = {},
   ): Promise<PropertyDetail | undefined> {
-    const { cancelPrevious = false } = options;
+    const { cancelPrevious = false, listProp = null } = options;
     const cacheKey = String(wasiId || '').trim();
-    if (detailCache.has(cacheKey)) return detailCache.get(cacheKey);
-    if (detailCache.has(wasiId)) return detailCache.get(wasiId);
+    if (!cacheKey) return undefined;
+
+    const readUsefulCache = (): PropertyDetail | undefined => {
+      for (const key of [cacheKey, wasiId]) {
+        if (!detailCache.has(key)) continue;
+        const cached = detailCache.get(key);
+        if (isUsefulPropertyDetail(cached)) return cached;
+        detailCache.delete(key);
+      }
+      return undefined;
+    };
+
+    const usefulCached = readUsefulCache();
+    if (usefulCached) return usefulCached;
 
     // Solo cancelar la petición previa en flujos interactivos (modal),
     // nunca en cargas en paralelo como el historial.
@@ -281,7 +302,7 @@ export const vitrinaApi = {
     }
 
     const isNumeric = /^\d+$/.test(String(wasiId));
-    let data: PropertyDetail;
+    let data: PropertyDetail | undefined;
 
     try {
       if (isNumeric) {
@@ -304,14 +325,45 @@ export const vitrinaApi = {
         data._locationRestricted = true;
         markExternallyRecoveredReference(wasiId);
       }
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return undefined;
+      // Si el detalle directo falla, aún intentamos recuperación abajo.
+      data = undefined;
+    }
 
+    if (isUsefulPropertyDetail(data)) {
+      detailCache.set(cacheKey, data!);
+      detailCache.set(wasiId, data!);
+      return data;
+    }
+
+    // Detalle vacío o fallido: recuperar por referencia (Wasi → n8n).
+    const seed: VitrinaInmueble = listProp
+      ? { ...listProp }
+      : {
+          id: wasiId,
+          codigoNumerico: wasiId,
+          titulo: '',
+          ubicacion: '',
+          descripcionCorta: '',
+          imagenUrl: '',
+        };
+    try {
+      await tryRecoverUnavailableProperty(seed, cacheKey);
+    } catch {
+      /* la recuperación es best-effort */
+    }
+
+    const recovered = readUsefulCache();
+    if (recovered) return recovered;
+
+    // Último recurso: devolver lo que vino de la API (aunque esté vacío).
+    if (data) {
       detailCache.set(cacheKey, data);
       detailCache.set(wasiId, data);
       return data;
-    } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') return undefined;
-      throw err;
     }
+    return undefined;
   },
 
   /** PATCH /vitrina/{token}/estado/{accion} — cambia el estado de un inmueble. */
