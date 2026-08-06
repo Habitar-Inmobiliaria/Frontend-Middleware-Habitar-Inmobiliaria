@@ -71,8 +71,11 @@ export function useUnavailableRecovery({
   // Shell vacío (con o sin spinner): sin título/precio útil todavía.
   const unavailable = looksUnavailable && !title && !hasPrice;
 
+  // Los omitidos del middleware ya se intentaron en servidor: card definitiva, sin “Verificando…”.
+  const skipRecovery = Boolean(inmueble._omittedFromApi);
+
   const [verifying, setVerifying] = useState(
-    () => ENABLE_CLIENT_LIST_RECOVERY && unavailable && Boolean(displayId),
+    () => ENABLE_CLIENT_LIST_RECOVERY && unavailable && Boolean(displayId) && !skipRecovery,
   );
   const onRecoveredRef = useRef(onRecovered);
   onRecoveredRef.current = onRecovered;
@@ -80,7 +83,7 @@ export function useUnavailableRecovery({
   inmuebleRef.current = inmueble;
 
   useEffect(() => {
-    if (!ENABLE_CLIENT_LIST_RECOVERY || !looksUnavailable || !displayId) {
+    if (skipRecovery || !ENABLE_CLIENT_LIST_RECOVERY || !looksUnavailable || !displayId) {
       setVerifying(false);
       return;
     }
@@ -101,7 +104,7 @@ export function useUnavailableRecovery({
     return () => {
       active = false;
     };
-  }, [looksUnavailable, displayId]);
+  }, [looksUnavailable, displayId, skipRecovery]);
 
   return {
     unavailable,

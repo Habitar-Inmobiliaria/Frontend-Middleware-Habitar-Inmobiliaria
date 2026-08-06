@@ -32,6 +32,8 @@ export function useListUnavailableRecovery(
     for (const prop of inmuebles) {
       const id = getDisplayPropertyId(prop);
       if (!id || inFlightRef.current.has(id)) continue;
+      // Omitidos del middleware: ya se intentaron en servidor → card definitiva.
+      if (prop._omittedFromApi) continue;
 
       const fields = {
         location: normalizeDisplayText(prop.ubicacion),

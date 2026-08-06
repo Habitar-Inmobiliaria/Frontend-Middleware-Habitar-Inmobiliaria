@@ -20,6 +20,7 @@ import {
   HISTORICO_PAGE_SIZE,
 } from '../utils/historico';
 import { mergeInmuebleLists } from '../utils/recovery';
+import { parseVitrinaAlertas } from '../utils/alertas';
 import PropertyCard from '../components/PropertyCard/PropertyCard';
 import type { CardAccion } from '../components/ActionBar/ActionBar';
 import AsesorCard from '../components/AsesorCard/AsesorCard';
@@ -134,9 +135,19 @@ export default function VitrinaPage() {
       setInmuebles([]);
       return;
     }
+    // Alertas "omitido" → cards "Inmueble no disponible" (no banner de texto).
+    const existingIds = new Set(
+      (data.inmuebles || [])
+        .map((i) => getDisplayPropertyId(i))
+        .filter(Boolean) as string[],
+    );
+    const { omitted } = parseVitrinaAlertas(data.alertas, existingIds);
+    const withOmitted =
+      omitted.length > 0 ? [...(data.inmuebles || []), ...omitted] : data.inmuebles || [];
+
     // No pisar cards ya recuperadas en cliente con shells vacíos del refresh.
     setInmuebles((prev) =>
-      prev.length ? mergeInmuebleLists(prev, data.inmuebles || []) : data.inmuebles || [],
+      prev.length ? mergeInmuebleLists(prev, withOmitted) : withOmitted,
     );
   }, [data]);
 
@@ -491,7 +502,8 @@ export default function VitrinaPage() {
   }
 
   const asesor = data?.asesor;
-  const alertas = (data?.alertas ?? []).filter((a) => Boolean(String(a || '').trim()));
+  // Las alertas "omitido" se muestran como cards; el banner solo para otros avisos.
+  const alertas = parseVitrinaAlertas(data?.alertas).otherAlerts;
   const emptyCopy = EMPTY_COPY[activeTab];
   const showHistoricoPagination =
     activeTab === 'historico' &&

@@ -56,6 +56,8 @@ export interface VitrinaInmueble {
   _fromHistorico?: boolean;
   _externalDataSource?: boolean;
   _locationRestricted?: boolean;
+  /** Omitido por el middleware (alerta); se muestra como card no disponible. */
+  _omittedFromApi?: boolean;
   /** Meta del registro de histórico (solo pestaña Histórico). */
   _historyMeta?: HistoricoInmueble;
 }
