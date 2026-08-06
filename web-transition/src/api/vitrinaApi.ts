@@ -71,6 +71,32 @@ function saveVitrinaSessionCache(token: string, data: VitrinaResponse): void {
   }
 }
 
+function clearVitrinaSessionCache(token: string): void {
+  try {
+    sessionStorage.removeItem(VITRINA_SESSION_PREFIX + token);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Huella estable del listado: detecta altas, bajas y cambios de estado/precio. */
+function vitrinaListFingerprint(data: VitrinaResponse | null | undefined): string {
+  const items = Array.isArray(data?.inmuebles) ? data!.inmuebles : [];
+  const parts = items.map((p) => {
+    const id = String(
+      p.codigoNumerico || p.id || p.urlReferencia || p.url || '',
+    ).trim();
+    const estado = String(p.estado || '').trim().toUpperCase();
+    const precio = String(p.precioFormateado || '').trim();
+    const titulo = String(p.titulo || '').trim();
+    return `${id}|${estado}|${precio}|${titulo}`;
+  });
+  parts.sort();
+  const total = data?.totalInmuebles ?? '';
+  const alertas = Array.isArray(data?.alertas) ? data!.alertas.join(';') : '';
+  return `${total}#${parts.join('||')}#${alertas}`;
+}
+
 /** Lee el cuerpo JSON o devuelve una vitrina vacía si no hay contenido. */
 async function readResponseJsonOrEmpty(res: Response): Promise<VitrinaResponse> {
   const text = await res.text();
@@ -195,52 +221,50 @@ function hasPaintableInmuebles(data: VitrinaResponse | null | undefined): boolea
 
 export interface GetVitrinaOptions {
   /**
-   * Tras pintar el primer payload usable, reintentos en segundo plano pueden
-   * entregar una lista más completa (p. ej. tras 503 parcial).
+   * Tras pintar un payload (sesión/parcial), el refresh de red puede
+   * empujar la versión autoritativa (altas, bajas, cambios de estado).
    */
-  onUpdate?: (data: VitrinaResponse) => void;
+  onUpdate?: (data: VitrinaResponse, meta?: { authoritative?: boolean }) => void;
 }
 
 /**
  * Refresco best-effort tras haber pintado ya la grilla.
- * No bloquea la UI; solo notifica si llega una lista más completa.
+ * Sustituye la UI cuando el GET de red difiere (no solo si crece la lista).
  */
 async function refreshVitrinaInBackground(
   token: string,
   painted: VitrinaResponse,
-  onUpdate?: (data: VitrinaResponse) => void,
+  onUpdate?: (data: VitrinaResponse, meta?: { authoritative?: boolean }) => void,
 ): Promise<void> {
   if (!onUpdate) return;
 
   let best = painted;
+  let bestFp = vitrinaListFingerprint(painted);
   let backoff = VITRINA_503_BACKOFF_MS;
   const maxRounds = Math.max(VITRINA_503_MAX_RETRIES, VITRINA_FETCH_ATTEMPTS);
 
   for (let i = 0; i < maxRounds; i++) {
     try {
-      await sleep(i === 0 ? 400 : backoff);
+      await sleep(i === 0 ? 250 : backoff);
       backoff = Math.min(backoff * 2, 8000);
 
       const r = await vitrinaFetchOnce(token, { cacheBust: true, allowHttpCache: false });
       const next = r.data;
-      if (!hasPaintableInmuebles(next)) continue;
+      // Lista vacía autoritativa también cuenta (p. ej. se quitaron todos).
+      if (r.outcome === 'partial' && !hasPaintableInmuebles(next)) continue;
 
-      const betterLen = countInmuebles(next) > countInmuebles(best);
-      const becameComplete =
-        r.outcome === 'ok' &&
-        isVitrinaPayloadComplete(next) &&
-        !isVitrinaPayloadComplete(best);
+      const nextFp = vitrinaListFingerprint(next);
+      const changed = nextFp !== bestFp;
+      const completeOk = r.outcome === 'ok' && isVitrinaPayloadComplete(next);
 
-      if (!betterLen && !becameComplete) {
-        if (r.outcome === 'ok' && isVitrinaPayloadComplete(next)) break;
-        continue;
-      }
+      if (!changed && !completeOk) continue;
 
       best = next;
+      bestFp = nextFp;
       saveVitrinaSessionCache(token, next);
-      onUpdate(next);
+      onUpdate(next, { authoritative: r.outcome === 'ok' });
 
-      if (r.outcome === 'ok' && isVitrinaPayloadComplete(next)) break;
+      if (completeOk) break;
     } catch {
       /* best-effort */
     }
@@ -249,9 +273,9 @@ async function refreshVitrinaInBackground(
 
 /**
  * Carga la vitrina con pintura temprana:
- * - En cuanto hay inmuebles (200 incompleto o 503 parcial), se devuelven.
- * - Los huecos se recuperan en cards (“Verificando…”) y/o con onUpdate en background.
- * - Solo se bloquea si no llega ningún ítem tras los reintentos.
+ * - Puede pintar sessionStorage al instante en revisitas (UX).
+ * - Siempre refresca en red sin caché HTTP y aplica cambios autoritativos.
+ * - 503/parcial: pinta lo disponible y completa en background.
  */
 async function fetchMostCompleteVitrinaData(
   token: string,
@@ -259,7 +283,7 @@ async function fetchMostCompleteVitrinaData(
 ): Promise<VitrinaResponse> {
   const { onUpdate } = options;
 
-  // Revisita: pintar caché de sesión al instante y refrescar en background.
+  // Revisita: pintar caché de sesión al instante y forzar red en background.
   const sessionCached = loadVitrinaSessionCache(token);
   if (hasPaintableInmuebles(sessionCached)) {
     void refreshVitrinaInBackground(token, sessionCached!, onUpdate);
@@ -270,10 +294,11 @@ async function fetchMostCompleteVitrinaData(
   const maxRounds = Math.max(VITRINA_503_MAX_RETRIES, VITRINA_FETCH_ATTEMPTS + 2);
 
   for (let i = 0; i < maxRounds; i++) {
-    const useHttpCache = i === 0;
+    // Siempre sin caché HTTP: el ETag/304 del navegador dejaba listas viejas
+    // aunque el middleware ya hubiera invalidado.
     const r = await vitrinaFetchOnce(token, {
-      cacheBust: !useHttpCache,
-      allowHttpCache: useHttpCache,
+      cacheBust: true,
+      allowHttpCache: false,
     });
 
     if (r.outcome === 'partial') {
@@ -337,6 +362,7 @@ async function cambiarEstado(token: string, accion: EstadoAccion, url: string): 
     body: JSON.stringify({ url }),
   });
   if (!res.ok) await handleApiError(res);
+  if (res.ok) clearVitrinaSessionCache(token);
   return res.ok;
 }
 
@@ -347,6 +373,37 @@ export const vitrinaApi = {
   /** GET /vitrina/{token}: pinta en cuanto hay ítems; completa en background. */
   async getVitrina(token: string, options?: GetVitrinaOptions): Promise<VitrinaResponse> {
     return fetchMostCompleteVitrinaData(token, options);
+  },
+
+  /**
+   * Refresco suave (p. ej. al volver a la pestaña): red sin caché HTTP.
+   * Empuja onUpdate si el listado cambió respecto a session/pintado.
+   */
+  async softRefreshVitrina(
+    token: string,
+    onUpdate?: (data: VitrinaResponse, meta?: { authoritative?: boolean }) => void,
+  ): Promise<VitrinaResponse | null> {
+    try {
+      const r = await vitrinaFetchOnce(token, { cacheBust: true, allowHttpCache: false });
+      const next = r.data;
+      if (r.outcome === 'partial' && !hasPaintableInmuebles(next) && countInmuebles(next) === 0) {
+        return null;
+      }
+      const prev = loadVitrinaSessionCache(token);
+      const changed = vitrinaListFingerprint(next) !== vitrinaListFingerprint(prev);
+      saveVitrinaSessionCache(token, next);
+      if (changed || r.outcome === 'ok') {
+        onUpdate?.(next, { authoritative: r.outcome === 'ok' });
+      }
+      return next;
+    } catch {
+      return null;
+    }
+  },
+
+  /** Borra la caché de sesión del listado (p. ej. tras mutación local de estado). */
+  clearSessionCache(token: string): void {
+    clearVitrinaSessionCache(token);
   },
 
   /** GET /historico-inmuebles/por-cliente/{token}. */

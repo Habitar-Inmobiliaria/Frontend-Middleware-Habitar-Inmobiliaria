@@ -146,8 +146,11 @@ export default function VitrinaPage() {
       omitted.length > 0 ? [...(data.inmuebles || []), ...omitted] : data.inmuebles || [];
 
     // No pisar cards ya recuperadas en cliente con shells vacíos del refresh.
+    // Si el backend quitó inmuebles, merge autoritativo (sin reinyectar).
     setInmuebles((prev) =>
-      prev.length ? mergeInmuebleLists(prev, withOmitted) : withOmitted,
+      prev.length
+        ? mergeInmuebleLists(prev, withOmitted, { authoritative: true })
+        : withOmitted,
     );
   }, [data]);
 
