@@ -1,15 +1,14 @@
 // ============================================================
 // Hook de carga de la vitrina
 // ------------------------------------------------------------
-// Encapsula la obtención de datos (vitrinaApi.getVitrina) y expone
-// los tres estados de la petición. Ignora el resultado si el
-// componente se desmonta o si cambia el token (evita actualizar
-// estado sobre un componente ya desmontado).
+// Pinta en cuanto hay un payload usable; actualizaciones posteriores
+// (lista más completa tras 503/enrichment) llegan vía onUpdate.
 // ============================================================
 
 import { useEffect, useState } from 'react';
 import { vitrinaApi } from '../api/vitrinaApi';
 import type { VitrinaResponse } from '../api/types';
+import { mergeInmuebleLists } from '../utils/recovery';
 
 export interface UseVitrinaState {
   data: VitrinaResponse | null;
@@ -34,14 +33,33 @@ export function useVitrina(token: string | undefined): UseVitrinaState {
     setState({ data: null, loading: true, error: null });
 
     vitrinaApi
-      .getVitrina(token)
+      .getVitrina(token, {
+        onUpdate: (fresh) => {
+          if (cancelled) return;
+          setState((prev) => ({
+            data: prev.data
+              ? {
+                  ...fresh,
+                  inmuebles: mergeInmuebleLists(prev.data.inmuebles || [], fresh.inmuebles || []),
+                  asesor: fresh.asesor ?? prev.data.asesor,
+                }
+              : fresh,
+            loading: false,
+            error: null,
+          }));
+        },
+      })
       .then((data) => {
         if (!cancelled) setState({ data, loading: false, error: null });
       })
       .catch((err: unknown) => {
         if (cancelled) return;
         const message = err instanceof Error ? err.message : 'No se pudo cargar la vitrina.';
-        setState({ data: null, loading: false, error: message });
+        setState((prev) =>
+          prev.data
+            ? { ...prev, loading: false, error: null }
+            : { data: null, loading: false, error: message },
+        );
       });
 
     return () => {

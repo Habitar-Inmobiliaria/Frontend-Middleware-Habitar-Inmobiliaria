@@ -19,6 +19,7 @@ import {
   getLatestHistoryByProperty,
   HISTORICO_PAGE_SIZE,
 } from '../utils/historico';
+import { mergeInmuebleLists } from '../utils/recovery';
 import PropertyCard from '../components/PropertyCard/PropertyCard';
 import type { CardAccion } from '../components/ActionBar/ActionBar';
 import AsesorCard from '../components/AsesorCard/AsesorCard';
@@ -129,7 +130,14 @@ export default function VitrinaPage() {
     commentsTab && commentsLoaded && hasVisibleComments(comments, activeTab);
 
   useEffect(() => {
-    setInmuebles(data?.inmuebles ?? []);
+    if (!data) {
+      setInmuebles([]);
+      return;
+    }
+    // No pisar cards ya recuperadas en cliente con shells vacíos del refresh.
+    setInmuebles((prev) =>
+      prev.length ? mergeInmuebleLists(prev, data.inmuebles || []) : data.inmuebles || [],
+    );
   }, [data]);
 
   /** Fusiona datos recuperados (Wasi/n8n) en listado e histórico. */

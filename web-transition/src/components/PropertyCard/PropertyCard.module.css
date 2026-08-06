@@ -227,6 +227,13 @@
   margin-bottom: 10px;
 }
 
+.verifyingId {
+  margin: 0 0 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
 .verifyingSpinner {
   width: 14px;
   height: 14px;

@@ -131,6 +131,69 @@ export function hasUsableListingContent(
   return false;
 }
 
+function listingContentFields(prop: VitrinaInmueble) {
+  return {
+    location: normalizeDisplayText(prop.ubicacion),
+    description: normalizeDisplayText(prop.descripcionCorta),
+    image: normalizeImageUrl(prop.imagenUrl || prop.imagenPrincipal),
+  };
+}
+
+/**
+ * Al refrescar el GET vitrina, conserva cards ya enriquecidas en cliente
+ * y no pierde ítems útiles que aún no vengan en un payload parcial.
+ */
+export function mergeInmuebleLists(
+  prev: VitrinaInmueble[],
+  incoming: VitrinaInmueble[],
+): VitrinaInmueble[] {
+  if (!prev.length) return incoming;
+  if (!incoming.length) return prev;
+
+  const prevById = new Map<string, VitrinaInmueble>();
+  for (const p of prev) {
+    const id = getDisplayPropertyId(p);
+    if (id) prevById.set(id, p);
+  }
+
+  const merged = incoming.map((item) => {
+    const id = getDisplayPropertyId(item);
+    const existing = id ? prevById.get(id) : undefined;
+    if (!existing) return item;
+
+    const incomingUsable = hasUsableListingContent(item, listingContentFields(item));
+    const existingUsable = hasUsableListingContent(existing, listingContentFields(existing));
+    if (existingUsable && !incomingUsable) return { ...item, ...existing };
+    if (existingUsable && incomingUsable) {
+      return {
+        ...item,
+        titulo: normalizeDisplayText(item.titulo) || existing.titulo,
+        precioFormateado:
+          normalizeDisplayText(item.precioFormateado) || existing.precioFormateado,
+        ubicacion: normalizeDisplayText(item.ubicacion) || existing.ubicacion,
+        descripcionCorta:
+          normalizeDisplayText(item.descripcionCorta) || existing.descripcionCorta,
+        imagenUrl:
+          normalizeImageUrl(item.imagenUrl || item.imagenPrincipal) ||
+          existing.imagenUrl ||
+          existing.imagenPrincipal,
+        _externalDataSource: item._externalDataSource || existing._externalDataSource,
+        _locationRestricted: item._locationRestricted || existing._locationRestricted,
+      };
+    }
+    return item;
+  });
+
+  const nextIds = new Set(merged.map((p) => getDisplayPropertyId(p)).filter(Boolean) as string[]);
+  for (const p of prev) {
+    const id = getDisplayPropertyId(p);
+    if (id && !nextIds.has(id) && hasUsableListingContent(p, listingContentFields(p))) {
+      merged.push(p);
+    }
+  }
+  return merged;
+}
+
 /**
  * Arma un detalle usable a partir del ítem de listado (p. ej. enriquecido
  * por n8n en el GET vitrina). El modal suele pedir /inmuebles/{id} a Wasi

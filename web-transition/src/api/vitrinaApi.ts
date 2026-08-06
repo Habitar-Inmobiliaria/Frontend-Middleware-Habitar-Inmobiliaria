@@ -184,12 +184,88 @@ async function maybeVerifyWhenNoDeclaredTotal(
   return data;
 }
 
+function countInmuebles(data: VitrinaResponse | null | undefined): number {
+  return Array.isArray(data?.inmuebles) ? data.inmuebles.length : 0;
+}
+
+/** true si el payload trae al menos un ítem para pintar la grilla. */
+function hasPaintableInmuebles(data: VitrinaResponse | null | undefined): boolean {
+  return countInmuebles(data) > 0;
+}
+
+export interface GetVitrinaOptions {
+  /**
+   * Tras pintar el primer payload usable, reintentos en segundo plano pueden
+   * entregar una lista más completa (p. ej. tras 503 parcial).
+   */
+  onUpdate?: (data: VitrinaResponse) => void;
+}
+
 /**
- * Carga la vitrina cumpliendo el contrato del backend:
- * 503 -> reintentar con backoff; 200 incompleto vs totalInmuebles -> reintentar;
- * primer intento híbrido (caché HTTP); sin total declarado -> verificación opcional legacy.
+ * Refresco best-effort tras haber pintado ya la grilla.
+ * No bloquea la UI; solo notifica si llega una lista más completa.
  */
-async function fetchMostCompleteVitrinaData(token: string): Promise<VitrinaResponse> {
+async function refreshVitrinaInBackground(
+  token: string,
+  painted: VitrinaResponse,
+  onUpdate?: (data: VitrinaResponse) => void,
+): Promise<void> {
+  if (!onUpdate) return;
+
+  let best = painted;
+  let backoff = VITRINA_503_BACKOFF_MS;
+  const maxRounds = Math.max(VITRINA_503_MAX_RETRIES, VITRINA_FETCH_ATTEMPTS);
+
+  for (let i = 0; i < maxRounds; i++) {
+    try {
+      await sleep(i === 0 ? 400 : backoff);
+      backoff = Math.min(backoff * 2, 8000);
+
+      const r = await vitrinaFetchOnce(token, { cacheBust: true, allowHttpCache: false });
+      const next = r.data;
+      if (!hasPaintableInmuebles(next)) continue;
+
+      const betterLen = countInmuebles(next) > countInmuebles(best);
+      const becameComplete =
+        r.outcome === 'ok' &&
+        isVitrinaPayloadComplete(next) &&
+        !isVitrinaPayloadComplete(best);
+
+      if (!betterLen && !becameComplete) {
+        if (r.outcome === 'ok' && isVitrinaPayloadComplete(next)) break;
+        continue;
+      }
+
+      best = next;
+      saveVitrinaSessionCache(token, next);
+      onUpdate(next);
+
+      if (r.outcome === 'ok' && isVitrinaPayloadComplete(next)) break;
+    } catch {
+      /* best-effort */
+    }
+  }
+}
+
+/**
+ * Carga la vitrina con pintura temprana:
+ * - En cuanto hay inmuebles (200 incompleto o 503 parcial), se devuelven.
+ * - Los huecos se recuperan en cards (“Verificando…”) y/o con onUpdate en background.
+ * - Solo se bloquea si no llega ningún ítem tras los reintentos.
+ */
+async function fetchMostCompleteVitrinaData(
+  token: string,
+  options: GetVitrinaOptions = {},
+): Promise<VitrinaResponse> {
+  const { onUpdate } = options;
+
+  // Revisita: pintar caché de sesión al instante y refrescar en background.
+  const sessionCached = loadVitrinaSessionCache(token);
+  if (hasPaintableInmuebles(sessionCached)) {
+    void refreshVitrinaInBackground(token, sessionCached!, onUpdate);
+    return sessionCached!;
+  }
+
   let backoff = VITRINA_503_BACKOFF_MS;
   const maxRounds = Math.max(VITRINA_503_MAX_RETRIES, VITRINA_FETCH_ATTEMPTS + 2);
 
@@ -201,9 +277,15 @@ async function fetchMostCompleteVitrinaData(token: string): Promise<VitrinaRespo
     });
 
     if (r.outcome === 'partial') {
-      console.warn('[Vitrina] 503 — respuesta degradada, reintentando con backoff…', {
+      console.warn('[Vitrina] 503 — lista parcial: pintando lo disponible…', {
         intento: i + 1,
+        inmuebles: countInmuebles(r.data),
       });
+      if (hasPaintableInmuebles(r.data)) {
+        saveVitrinaSessionCache(token, r.data);
+        void refreshVitrinaInBackground(token, r.data, onUpdate);
+        return r.data;
+      }
       await sleep(backoff);
       backoff = Math.min(backoff * 2, 10000);
       continue;
@@ -217,9 +299,18 @@ async function fetchMostCompleteVitrinaData(token: string): Promise<VitrinaRespo
       return await maybeVerifyWhenNoDeclaredTotal(token, data);
     }
 
-    console.warn('[Vitrina] Lista incoherente con totalInmuebles, reintentando sin caché…', {
-      intento: i + 1,
-    });
+    // 200 con totalInmuebles !== length: pintar ya; completar en background.
+    if (hasPaintableInmuebles(data)) {
+      console.warn('[Vitrina] Lista aún incompleta vs totalInmuebles — pintando ya…', {
+        intento: i + 1,
+        totalInmuebles: getDeclaredPropertyCount(data),
+        length: countInmuebles(data),
+      });
+      saveVitrinaSessionCache(token, data);
+      void refreshVitrinaInBackground(token, data, onUpdate);
+      return data;
+    }
+
     await sleep(Math.min(300 * (i + 1), 2000));
   }
 
@@ -253,9 +344,9 @@ async function cambiarEstado(token: string, accion: EstadoAccion, url: string): 
 // Servicio público
 // ------------------------------------------------------------
 export const vitrinaApi = {
-  /** GET /vitrina/{token} con lógica completa de reintentos y caché. */
-  async getVitrina(token: string): Promise<VitrinaResponse> {
-    return fetchMostCompleteVitrinaData(token);
+  /** GET /vitrina/{token}: pinta en cuanto hay ítems; completa en background. */
+  async getVitrina(token: string, options?: GetVitrinaOptions): Promise<VitrinaResponse> {
+    return fetchMostCompleteVitrinaData(token, options);
   },
 
   /** GET /historico-inmuebles/por-cliente/{token}. */

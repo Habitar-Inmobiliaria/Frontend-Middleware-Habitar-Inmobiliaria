@@ -41,15 +41,14 @@ export const VITRINA_SESSION_PREFIX = 'vitrina_last_ok_';
 
 /**
  * Recuperación cliente de inmuebles “vacíos” en el listado.
- * Flujo esperado (paridad vanilla):
- * 1) GET vitrina pinta todas las cards de inmediato.
+ * Flujo esperado:
+ * 1) GET vitrina pinta lo disponible de inmediato (también si viene 503/parcial).
  * 2) Las excepciones sin datos útiles muestran “Verificando…” y se
  *    recuperan en segundo plano (Wasi → n8n) sin bloquear el resto.
- * El middleware ya enriquece muchos casos; esto cubre los que aún llegan vacíos.
  */
 export const ENABLE_CLIENT_LIST_RECOVERY = true;
 
-/** Tras este tiempo de carga, el skeleton muestra un aviso de paciencia. */
+/** Tras este tiempo de carga inicial (sin ningún payload aún), aviso de paciencia. */
 export const VITRINA_SLOW_LOAD_MS = 8_000;
 
 /**

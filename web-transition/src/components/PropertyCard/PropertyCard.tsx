@@ -52,6 +52,28 @@ export default function PropertyCard({
   const showPrice = !isZeroPrice(rawPrice);
 
   if (unavailable) {
+    // Mientras verifica: solo el estado de recuperación (sin mensaje definitivo).
+    if (verifying) {
+      return (
+        <article
+          className={`${styles.card} ${styles.cardUnavailable}`}
+          data-property-code={displayId || undefined}
+        >
+          <div className={`${styles.imageWrapper} ${styles.imageWrapperUnavailable}`}>
+            <div className={styles.unavailableMedia}>Previsualización de inmueble</div>
+          </div>
+          <div className={styles.details}>
+            <div className={styles.verifying} role="status" aria-live="polite">
+              <span className={styles.verifyingSpinner} aria-hidden="true" />
+              <span>Verificando disponibilidad…</span>
+            </div>
+            {displayId ? <p className={styles.verifyingId}>ID: {displayId}</p> : null}
+            <h2 className={styles.title}>Completando información…</h2>
+          </div>
+        </article>
+      );
+    }
+
     return (
       <article
         className={`${styles.card} ${styles.cardUnavailable}`}
@@ -64,12 +86,6 @@ export default function PropertyCard({
           <div className={styles.unavailableRibbon}>
             El inmueble con id {displayId || 'N/D'} ya no se encuentra disponible
           </div>
-          {verifying && (
-            <div className={styles.verifying} role="status" aria-live="polite">
-              <span className={styles.verifyingSpinner} aria-hidden="true" />
-              <span>Verificando disponibilidad…</span>
-            </div>
-          )}
           <h2 className={styles.title}>Inmueble no disponible</h2>
         </div>
       </article>

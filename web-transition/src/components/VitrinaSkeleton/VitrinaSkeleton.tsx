@@ -5,8 +5,8 @@ export interface VitrinaSkeletonProps {
   /** Cuántas tarjetas de inmueble mostrar. Default 6 (3 cols × 2). */
   propertyCount?: number;
   /**
-   * true cuando el GET vitrina lleva varios segundos (enrichment/scrape en backend).
-   * Muestra un aviso de paciencia sin cambiar el layout.
+   * true cuando aún no hay payload usable tras varios segundos.
+   * (La grilla ya no espera el enrichment completo.)
    */
   slowLoad?: boolean;
 }
@@ -28,7 +28,7 @@ export default function VitrinaSkeleton({
     >
       {slowLoad && (
         <div className={styles.slowLoadHint} role="status" aria-live="polite">
-          Estamos completando algunas propiedades. Esto puede tardar un momento…
+          Conectando con tu vitrina. Un momento…
         </div>
       )}
 
