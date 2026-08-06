@@ -154,7 +154,7 @@ export default function VitrinaPage() {
     });
   }, []);
 
-  // Recuperación a nivel página (desactivada: enrichment ya corre en middleware).
+  // Recuperación en segundo plano de excepciones vacías (Verificando…).
   useListUnavailableRecovery(inmuebles, handleRecovered);
 
   // Aviso de paciencia si el GET vitrina tarda (scrapes en backend).

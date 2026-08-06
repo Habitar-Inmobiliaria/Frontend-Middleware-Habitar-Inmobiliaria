@@ -18,8 +18,8 @@ interface PropertyCardProps {
 
 // Tarjeta de un inmueble. Presenta imagen, precio, ID, título, ubicación,
 // descripción y las acciones según la pestaña activa.
-// El enrichment Wasi→n8n del listado vive en el middleware; la card solo
-// muestra shell vacío si el ítem llega sin datos útiles.
+// Si llega sin datos útiles, muestra “Verificando disponibilidad…” y
+// recupera en segundo plano sin bloquear el resto de la grilla.
 export default function PropertyCard({
   inmueble,
   activeTab,

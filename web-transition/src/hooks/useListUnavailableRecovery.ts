@@ -14,8 +14,9 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Recupera en segundo plano inmuebles vacíos del listado.
- * Desactivado por defecto: el middleware ya hace Wasi → n8n en el GET vitrina.
+ * Recupera en segundo plano inmuebles “no disponibles” del listado.
+ * No bloquea la pintura inicial: las cards normales se ven de inmediato;
+ * las excepciones se enriquecen después (Wasi → n8n) vía onRecovered.
  */
 export function useListUnavailableRecovery(
   inmuebles: VitrinaInmueble[],

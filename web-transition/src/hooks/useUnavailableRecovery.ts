@@ -21,7 +21,7 @@ interface UseUnavailableRecoveryOptions {
 }
 
 interface UseUnavailableRecoveryResult {
-  /** Mostrar el shell "Inmueble no disponible". */
+  /** Mostrar el shell "Inmueble no disponible" / verificando. */
   unavailable: boolean;
   verifying: boolean;
   displayId: string;
@@ -30,9 +30,9 @@ interface UseUnavailableRecoveryResult {
 }
 
 /**
- * Detecta inmuebles sin datos útiles en tarjeta.
- * Tras el enrichment Wasi→n8n en middleware, la recuperación cliente del
- * listado queda desactivada (ENABLE_CLIENT_LIST_RECOVERY) para no duplicar scrapes.
+ * Detecta inmuebles sin datos útiles y, si la recuperación de listado está
+ * habilitada, intenta Wasi → n8n en segundo plano mientras el resto de cards
+ * ya están visibles (flujo original de “Verificando disponibilidad…”).
  */
 export function useUnavailableRecovery({
   inmueble,
@@ -68,10 +68,12 @@ export function useUnavailableRecovery({
   const looksUnavailable =
     Boolean(displayId) && !alreadyUsable && (shellEmpty || unavailableByImageFail);
 
-  // Shell visual solo si aún no hay nada útil que mostrar.
+  // Shell vacío (con o sin spinner): sin título/precio útil todavía.
   const unavailable = looksUnavailable && !title && !hasPrice;
 
-  const [verifying, setVerifying] = useState(false);
+  const [verifying, setVerifying] = useState(
+    () => ENABLE_CLIENT_LIST_RECOVERY && unavailable && Boolean(displayId),
+  );
   const onRecoveredRef = useRef(onRecovered);
   onRecoveredRef.current = onRecovered;
   const inmuebleRef = useRef(inmueble);
@@ -89,6 +91,7 @@ export function useUnavailableRecovery({
     recoveryApi
       .tryRecoverUnavailableProperty(inmuebleRef.current, displayId)
       .then((updated) => {
+        // Aplicar aunque el efecto se limpie (cambio de pestaña): el listado sigue vivo.
         if (updated) onRecoveredRef.current(updated);
       })
       .finally(() => {
