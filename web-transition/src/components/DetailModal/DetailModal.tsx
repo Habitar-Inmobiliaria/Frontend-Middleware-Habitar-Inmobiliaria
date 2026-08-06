@@ -7,6 +7,7 @@ import { usePropertyDetail } from '../../hooks/usePropertyDetail';
 import { extractPropertyIdFromUrl, getDisplayPropertyId } from '../../utils/property';
 import { looksLikeHtml, sanitizeDescriptionHtml } from '../../utils/html';
 import { prepareDetailForDisplay, mergeDetailWithListProp } from '../../utils/recovery';
+import { normalizeDisplayText } from '../../utils/text';
 import Gallery from './Gallery';
 import VideoSection from './VideoSection';
 import MapSection from './MapSection';
@@ -23,9 +24,10 @@ interface DetailModalProps {
 
 const ESTADO_FISICO: Record<string, string> = { Used: 'Usado', New: 'Nuevo' };
 
-// Descarta valores vacíos o sin contenido útil ("0", "m²", espacios).
+// Descarta vacíos, placeholders Wasi y unidades sin número.
 function isMeaningful(value: unknown): boolean {
-  return Boolean(value) && !/^\s*(m²|m2|0)?\s*$/i.test(String(value));
+  const text = normalizeDisplayText(value);
+  return Boolean(text) && !/^\s*(m²|m2|0)?\s*$/i.test(text);
 }
 
 export default function DetailModal({
@@ -213,7 +215,23 @@ function DetailContent({ detail: d, inmueble, activeTab, processing, onAction }:
 
         <div className={styles.specsCol}>
           <h2 className={styles.title}>{titulo}</h2>
-          <PriceBlock detail={{ ...d, precioFormateado: d.precioFormateado || inmueble.precioFormateado }} />
+          <PriceBlock
+            detail={{
+              ...d,
+              precioFormateado:
+                normalizeDisplayText(d.precioFormateado) ||
+                normalizeDisplayText(inmueble.precioFormateado) ||
+                undefined,
+              tipoNegocio:
+                normalizeDisplayText(d.tipoNegocio) ||
+                (/mensual|alquiler|arriendo|renta/i.test(
+                  normalizeDisplayText(d.precioFormateado) ||
+                    normalizeDisplayText(inmueble.precioFormateado),
+                )
+                  ? 'Alquiler'
+                  : undefined),
+            }}
+          />
           <div className={styles.specList}>
             {specRows.map(([label, value]) => (
               <div className={styles.specRow} key={label}>
@@ -277,8 +295,8 @@ function CheckList({ items }: { items: string[] }) {
 
 // Bloque de precio; soporta precio dual "Venta: ... | Alquiler: ...".
 function PriceBlock({ detail: d }: { detail: PropertyDetail }) {
-  const raw = d.precioFormateado || '';
-  if (!raw.trim()) {
+  const raw = normalizeDisplayText(d.precioFormateado);
+  if (!raw) {
     return (
       <div className={styles.priceBlock}>
         <div className={styles.price}>Consultar precio</div>

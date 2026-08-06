@@ -177,8 +177,9 @@ export function hydrateDetailFromListProp(
 }
 
 /**
- * Combina detalle de API con datos del listado: rellena huecos sin pisar
- * campos útiles del GET detalle.
+ * Combina detalle de API con datos del listado.
+ * Los placeholders del detalle Wasi vacío ("Consultar precio", "N/A", etc.)
+ * no pisan valores reales del listado/n8n.
  */
 export function mergeDetailWithListProp(
   detail: PropertyDetail | null | undefined,
@@ -187,38 +188,70 @@ export function mergeDetailWithListProp(
   const fromList = hydrateDetailFromListProp(listProp);
   if (!detail && !fromList) return null;
   if (!detail) return fromList;
-  if (!fromList) return detail;
+  if (!fromList) return sanitizeDetailPlaceholders(detail);
+
+  const cleaned = sanitizeDetailPlaceholders(detail);
 
   const pick = (a: string | undefined, b: string | undefined) =>
     normalizeDisplayText(a) || normalizeDisplayText(b) || undefined;
 
-  const apiImages = Array.isArray(detail.galeriasImagenes)
-    ? detail.galeriasImagenes.map((u) => normalizeImageUrl(u)).filter(Boolean)
-    : Array.isArray(detail.imagenes)
-      ? detail.imagenes.map((u) => normalizeImageUrl(u)).filter(Boolean)
+  const apiImages = Array.isArray(cleaned.galeriasImagenes)
+    ? cleaned.galeriasImagenes.map((u) => normalizeImageUrl(u)).filter(Boolean)
+    : Array.isArray(cleaned.imagenes)
+      ? cleaned.imagenes.map((u) => normalizeImageUrl(u)).filter(Boolean)
       : [];
   const listImages = fromList.galeriasImagenes || [];
   const images = apiImages.length > 0 ? apiImages : listImages;
 
   return {
     ...fromList,
-    ...detail,
-    titulo: pick(detail.titulo, fromList.titulo),
-    precioFormateado: pick(detail.precioFormateado, fromList.precioFormateado),
-    ubicacion: pick(detail.ubicacion, fromList.ubicacion),
-    descripcionCorta: pick(detail.descripcionCorta, fromList.descripcionCorta),
-    descripcion: pick(detail.descripcion, fromList.descripcion),
-    habitaciones: pick(detail.habitaciones, fromList.habitaciones),
-    banos: pick(detail.banos, fromList.banos),
-    areaConstruida: pick(detail.areaConstruida, fromList.areaConstruida),
-    tipoNegocio: pick(detail.tipoNegocio, fromList.tipoNegocio),
-    tipoInmueble: pick(detail.tipoInmueble, fromList.tipoInmueble),
-    url: pick(detail.url, fromList.url),
-    urlReferencia: pick(detail.urlReferencia, fromList.urlReferencia),
+    ...cleaned,
+    titulo: pick(cleaned.titulo, fromList.titulo),
+    precioFormateado: pick(cleaned.precioFormateado, fromList.precioFormateado),
+    ubicacion: pick(cleaned.ubicacion, fromList.ubicacion),
+    descripcionCorta: pick(cleaned.descripcionCorta, fromList.descripcionCorta),
+    descripcion: pick(cleaned.descripcion, fromList.descripcion),
+    habitaciones: pick(cleaned.habitaciones, fromList.habitaciones),
+    banos: pick(cleaned.banos, fromList.banos),
+    areaConstruida: pick(cleaned.areaConstruida, fromList.areaConstruida),
+    areaTerreno: pick(cleaned.areaTerreno, fromList.areaTerreno),
+    tipoNegocio: pick(cleaned.tipoNegocio, fromList.tipoNegocio),
+    tipoInmueble: pick(cleaned.tipoInmueble, fromList.tipoInmueble),
+    estrato: pick(cleaned.estrato, fromList.estrato as string | undefined),
+    piso: pick(cleaned.piso, undefined),
+    latitude: pick(cleaned.latitude, undefined),
+    longitude: pick(cleaned.longitude, undefined),
+    url: pick(cleaned.url, fromList.url),
+    urlReferencia: pick(cleaned.urlReferencia, fromList.urlReferencia),
     galeriasImagenes: images,
     imagenes: images,
-    _externalDataSource: detail._externalDataSource || fromList._externalDataSource,
-    _locationRestricted: detail._locationRestricted || fromList._locationRestricted,
+    _externalDataSource: cleaned._externalDataSource || fromList._externalDataSource,
+    _locationRestricted: cleaned._locationRestricted || fromList._locationRestricted,
+  };
+}
+
+/** Limpia placeholders típicos del detalle Wasi degradado. */
+function sanitizeDetailPlaceholders(detail: PropertyDetail): PropertyDetail {
+  const clean = (v: string | undefined) => normalizeDisplayText(v) || undefined;
+  return {
+    ...detail,
+    titulo: clean(detail.titulo),
+    precioFormateado: clean(detail.precioFormateado),
+    ubicacion: clean(detail.ubicacion),
+    zona: clean(detail.zona),
+    direccion: clean(detail.direccion),
+    descripcionCorta: clean(detail.descripcionCorta),
+    descripcion: clean(detail.descripcion),
+    tipoNegocio: clean(detail.tipoNegocio),
+    tipoInmueble: clean(detail.tipoInmueble),
+    estrato: clean(detail.estrato),
+    piso: clean(detail.piso),
+    habitaciones: clean(detail.habitaciones),
+    banos: clean(detail.banos),
+    areaConstruida: clean(detail.areaConstruida),
+    areaTerreno: clean(detail.areaTerreno),
+    areaPrivada: clean(detail.areaPrivada),
+    valorAdministracion: clean(detail.valorAdministracion),
   };
 }
 

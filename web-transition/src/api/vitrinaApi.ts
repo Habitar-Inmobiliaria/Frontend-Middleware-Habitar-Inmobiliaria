@@ -41,6 +41,7 @@ import type {
   VitrinaResponse,
 } from './types';
 import { isUsefulRecoveredPropertyPayload, mergeDetailWithListProp } from '../utils/recovery';
+import { normalizeDisplayText } from '../utils/text';
 
 export { markExternallyRecoveredReference, wasExternallyRecoveredByReferencia };
 
@@ -279,12 +280,40 @@ export const vitrinaApi = {
     const cacheKey = String(wasiId || '').trim();
     if (!cacheKey) return undefined;
 
+    const needsScrapeEnrichment = (detail: PropertyDetail | null | undefined): boolean => {
+      if (!detail) return true;
+      const price = normalizeDisplayText(detail.precioFormateado);
+      const area =
+        normalizeDisplayText(detail.areaConstruida) ||
+        normalizeDisplayText(detail.areaTerreno);
+      const galleryLen = Array.isArray(detail.galeriasImagenes)
+        ? detail.galeriasImagenes.filter(Boolean).length
+        : Array.isArray(detail.imagenes)
+          ? detail.imagenes.filter(Boolean).length
+          : 0;
+      const hasCoords =
+        Boolean(normalizeDisplayText(detail.latitude)) &&
+        Boolean(normalizeDisplayText(detail.longitude));
+      // Flaco = sin precio real, o sin specs/galería/mapa.
+      return !price || (!area && galleryLen <= 1 && !hasCoords);
+    };
+
     const readUsefulCache = (): PropertyDetail | undefined => {
       for (const key of [cacheKey, wasiId]) {
         if (!detailCache.has(key)) continue;
         const cached = detailCache.get(key);
-        if (isUsefulPropertyDetail(cached)) return cached;
-        detailCache.delete(key);
+        if (!isUsefulPropertyDetail(cached)) {
+          detailCache.delete(key);
+          continue;
+        }
+        // Re-fusionar con listado por si la caché guardó placeholders Wasi.
+        const refreshed = mergeDetailWithListProp(cached, listProp) ?? cached;
+        if (needsScrapeEnrichment(refreshed)) {
+          detailCache.delete(key);
+          continue;
+        }
+        detailCache.set(key, refreshed!);
+        return refreshed;
       }
       return undefined;
     };
@@ -331,22 +360,18 @@ export const vitrinaApi = {
       data = undefined;
     }
 
-    if (isUsefulPropertyDetail(data)) {
-      const merged = mergeDetailWithListProp(data, listProp) ?? data!;
-      detailCache.set(cacheKey, merged);
-      detailCache.set(wasiId, merged);
-      return merged;
+    // Wasi a menudo responde "útil" solo por el título, con placeholders
+    // (Consultar precio, N/A). Fusionamos con listado y, si sigue flaco,
+    // intentamos scrape n8n para galería/áreas/coords.
+    const fromApiOrList = mergeDetailWithListProp(data, listProp) ?? data;
+
+    if (isUsefulPropertyDetail(fromApiOrList) && !needsScrapeEnrichment(fromApiOrList)) {
+      detailCache.set(cacheKey, fromApiOrList!);
+      detailCache.set(wasiId, fromApiOrList!);
+      return fromApiOrList;
     }
 
-    // Detalle vacío o fallido: si el listado ya trae datos (n8n/middleware), úsalos.
-    const fromList = mergeDetailWithListProp(null, listProp);
-    if (fromList && isUsefulPropertyDetail(fromList)) {
-      detailCache.set(cacheKey, fromList);
-      detailCache.set(wasiId, fromList);
-      return fromList;
-    }
-
-    // Sin datos en listado: recuperar por referencia (Wasi → n8n).
+    // Detalle vacío / flaco: recuperar por referencia (Wasi → n8n).
     const seed: VitrinaInmueble = listProp
       ? { ...listProp }
       : {
@@ -365,14 +390,21 @@ export const vitrinaApi = {
 
     const recovered = readUsefulCache();
     if (recovered) {
-      const merged = mergeDetailWithListProp(recovered, listProp) ?? recovered;
-      detailCache.set(cacheKey, merged);
-      detailCache.set(wasiId, merged);
-      return merged;
+      // El scrape n8n es la fuente rica; listado rellena huecos restantes.
+      const enriched = mergeDetailWithListProp(recovered, listProp) ?? recovered;
+      detailCache.set(cacheKey, enriched);
+      detailCache.set(wasiId, enriched);
+      return enriched;
     }
 
-    // Último recurso: devolver API vacía fusionada con listado si hay algo.
-    const fallback = mergeDetailWithListProp(data, listProp) ?? data;
+    // Sin scrape: listado/API fusionado si hay algo usable.
+    if (fromApiOrList && isUsefulPropertyDetail(fromApiOrList)) {
+      detailCache.set(cacheKey, fromApiOrList);
+      detailCache.set(wasiId, fromApiOrList);
+      return fromApiOrList;
+    }
+
+    const fallback = fromApiOrList ?? data;
     if (fallback) {
       detailCache.set(cacheKey, fallback);
       detailCache.set(wasiId, fallback);

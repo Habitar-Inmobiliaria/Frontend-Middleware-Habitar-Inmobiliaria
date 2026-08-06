@@ -14,6 +14,13 @@ export function normalizeDisplayText(value: unknown): string {
   if (/^null\s*-\s*null$/i.test(text)) return '';
   if (/^sin descripci[oó]n disponible\.?$/i.test(text)) return '';
   if (/^inmueble sin informaci[oó]n completa\.?$/i.test(text)) return '';
+  // Placeholders típicos del detalle Wasi vacío / mapper degradado.
+  if (/^consultar precio\.?$/i.test(text)) return '';
+  if (/^no especificado\.?$/i.test(text)) return '';
+  if (/^no especificad[ao]\.?$/i.test(text)) return '';
+  if (/^n\/?a\.?$/i.test(text)) return '';
+  if (/^inmueble$/i.test(text)) return '';
+  if (/^precio de\s*$/i.test(text)) return '';
   return text;
 }
 
