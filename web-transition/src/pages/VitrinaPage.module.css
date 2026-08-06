@@ -56,6 +56,33 @@
   width: 100%;
 }
 
+.searchSlot {
+  min-width: 0;
+  width: 100%;
+  max-width: 420px;
+  padding-top: 4px;
+  padding-bottom: 12px;
+}
+
+.clearSearchBtn {
+  margin-top: 16px;
+  padding: 10px 18px;
+  border: 1px solid var(--border-color);
+  border-radius: 9999px;
+  background: #fff;
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.clearSearchBtn:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
 .title {
   font-size: clamp(1.75rem, 3.2vw, 2.55rem);
   font-weight: 800;
@@ -229,6 +256,13 @@
 
   .tabsSlot {
     order: 3;
+  }
+
+  .searchSlot {
+    order: 4;
+    max-width: none;
+    padding-top: 0;
+    padding-bottom: 8px;
   }
 
   .tabs {

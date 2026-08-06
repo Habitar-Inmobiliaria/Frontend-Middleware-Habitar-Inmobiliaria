@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useParams } from 'react-router-dom';
 import type { VitrinaInmueble } from '../api/types';
 import { vitrinaApi } from '../api/vitrinaApi';
@@ -21,11 +21,13 @@ import {
 } from '../utils/historico';
 import { mergeInmuebleLists } from '../utils/recovery';
 import { parseVitrinaAlertas } from '../utils/alertas';
+import { filterInmueblesBySearch, normalizeSearchQuery } from '../utils/search';
 import PropertyCard from '../components/PropertyCard/PropertyCard';
 import type { CardAccion } from '../components/ActionBar/ActionBar';
 import AsesorCard from '../components/AsesorCard/AsesorCard';
 import BuscadorCTA from '../components/BuscadorCTA/BuscadorCTA';
 import TabNav from '../components/TabNav/TabNav';
+import VitrinaSearchBar from '../components/VitrinaSearchBar/VitrinaSearchBar';
 import Toast from '../components/Toast/Toast';
 import FeedbackModal from '../components/modals/FeedbackModal';
 import LoadingModal from '../components/modals/LoadingModal';
@@ -96,6 +98,9 @@ export default function VitrinaPage() {
   const { data, loading, error } = useVitrina(token);
   const { message: toastMsg, visible: toastVisible, showToast } = useToast();
   const [activeTab, setActiveTab] = useState<TabId>('sin-revisar');
+  const [searchQuery, setSearchQuery] = useState('');
+  const deferredSearch = useDeferredValue(searchQuery);
+  const searchActive = Boolean(normalizeSearchQuery(deferredSearch));
 
   const [inmuebles, setInmuebles] = useState<VitrinaInmueble[]>([]);
   const [processing, setProcessing] = useState<Set<string>>(new Set());
@@ -469,16 +474,37 @@ export default function VitrinaPage() {
     return acc;
   }, [inmuebles]);
 
-  const historicoTotalPages = Math.max(1, Math.ceil(historicoData.length / HISTORICO_PAGE_SIZE));
+  const tabFiltered = useMemo(() => {
+    if (activeTab === 'historico') return historicoData;
+    return inmuebles.filter((i) => matchesTab(i, activeTab)).reverse();
+  }, [activeTab, inmuebles, historicoData]);
+
+  const searchFiltered = useMemo(
+    () => filterInmueblesBySearch(tabFiltered, deferredSearch),
+    [tabFiltered, deferredSearch],
+  );
+
+  const historicoTotalPages = Math.max(
+    1,
+    Math.ceil(
+      (activeTab === 'historico' ? searchFiltered.length : historicoData.length) /
+        HISTORICO_PAGE_SIZE,
+    ),
+  );
+
+  // Al cambiar la búsqueda, volver a la primera página del histórico.
+  useEffect(() => {
+    setHistoricoPage(1);
+  }, [deferredSearch, activeTab]);
 
   const visibles = useMemo(() => {
     if (activeTab === 'historico') {
       const page = Math.min(Math.max(historicoPage, 1), historicoTotalPages);
       const start = (page - 1) * HISTORICO_PAGE_SIZE;
-      return historicoData.slice(start, start + HISTORICO_PAGE_SIZE);
+      return searchFiltered.slice(start, start + HISTORICO_PAGE_SIZE);
     }
-    return inmuebles.filter((i) => matchesTab(i, activeTab)).reverse();
-  }, [activeTab, inmuebles, historicoData, historicoPage, historicoTotalPages]);
+    return searchFiltered;
+  }, [activeTab, searchFiltered, historicoPage, historicoTotalPages]);
 
   // Mientras llega la API (o animación de salida del skeleton).
   if (loading || bootView === 'skeleton' || bootView === 'exiting') {
@@ -507,11 +533,16 @@ export default function VitrinaPage() {
   const asesor = data?.asesor;
   // Las alertas "omitido" se muestran como cards; el banner solo para otros avisos.
   const alertas = parseVitrinaAlertas(data?.alertas).otherAlerts;
-  const emptyCopy = EMPTY_COPY[activeTab];
+  const emptyCopy = searchActive
+    ? {
+        title: 'Sin resultados',
+        desc: `No hay inmuebles que coincidan con “${normalizeSearchQuery(deferredSearch)}”.`,
+      }
+    : EMPTY_COPY[activeTab];
   const showHistoricoPagination =
     activeTab === 'historico' &&
     !historicoLoading &&
-    historicoData.length > HISTORICO_PAGE_SIZE;
+    searchFiltered.length > HISTORICO_PAGE_SIZE;
 
   // Orden: título → tabs → sidebar → cards, uno tras otro con rebote.
   const playing = entrancePhase === 'playing';
@@ -551,8 +582,19 @@ export default function VitrinaPage() {
               onChange={setActiveTab}
             />
           </div>
+          <div
+            className={`${styles.searchSlot} ${enterClass('item') ?? ''}`}
+            style={enterStyle(2)}
+          >
+            <VitrinaSearchBar
+              value={searchQuery}
+              onChange={setSearchQuery}
+              active={searchActive}
+              resultCount={searchFiltered.length}
+            />
+          </div>
         </div>
-        <aside className={`${styles.sidebar} ${enterClass('item') ?? ''}`} style={enterStyle(2)}>
+        <aside className={`${styles.sidebar} ${enterClass('item') ?? ''}`} style={enterStyle(3)}>
           {asesor && <AsesorCard asesor={asesor} />}
           <BuscadorCTA />
         </aside>
@@ -577,9 +619,18 @@ export default function VitrinaPage() {
             <p>Cargando histórico…</p>
           </div>
         ) : visibles.length === 0 ? (
-          <div className={`${styles.state} ${enterClass('item') ?? ''}`} style={enterStyle(3)}>
+          <div className={`${styles.state} ${enterClass('item') ?? ''}`} style={enterStyle(4)}>
             <div className={styles.stateTitle}>{emptyCopy.title}</div>
             <p>{emptyCopy.desc}</p>
+            {searchActive ? (
+              <button
+                type="button"
+                className={styles.clearSearchBtn}
+                onClick={() => setSearchQuery('')}
+              >
+                Limpiar búsqueda
+              </button>
+            ) : null}
           </div>
         ) : (
           <section className={styles.grid}>
@@ -587,7 +638,7 @@ export default function VitrinaPage() {
               <div
                 key={getInmuebleKey(inmueble, index)}
                 className={enterClass('card')}
-                style={enterStyle(3 + index)}
+                style={enterStyle(4 + index)}
               >
                 <PropertyCard
                   inmueble={inmueble}
