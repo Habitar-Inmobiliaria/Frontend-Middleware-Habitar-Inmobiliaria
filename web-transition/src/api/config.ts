@@ -40,7 +40,17 @@ export const VITRINA_304_MAX_DEPTH = 3;
 export const VITRINA_SESSION_PREFIX = 'vitrina_last_ok_';
 
 /**
- * Webhook n8n de scrape de inmueble (fallback si el middleware/Wasi no recupera datos).
+ * Tras el enrichment Wasi→n8n en el middleware, el listado ya no debe
+ * scrapear desde el browser (evita duplicar trabajo y saturar n8n).
+ * El detalle del modal puede seguir usando recovery puntual.
+ */
+export const ENABLE_CLIENT_LIST_RECOVERY = false;
+
+/** Tras este tiempo de carga, el skeleton muestra un aviso de paciencia. */
+export const VITRINA_SLOW_LOAD_MS = 8_000;
+
+/**
+ * Webhook n8n de scrape de inmueble (fallback legacy / detalle).
  * No contiene secretos; la URL es pública del webhook de automatización.
  */
 export const N8N_SCRAPE_INMUEBLE_URL =

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { VitrinaInmueble } from '../api/types';
+import { ENABLE_CLIENT_LIST_RECOVERY } from '../api/config';
 import {
   recoveryApi,
   wasExternallyRecoveredByReferencia,
@@ -10,7 +11,7 @@ import {
   shouldRestrictPropertyLocation,
 } from '../utils/recovery';
 import { getDisplayPropertyId } from '../utils/property';
-import { isZeroPrice, normalizeDisplayText } from '../utils/text';
+import { isZeroPrice, normalizeDisplayText, normalizeImageUrl } from '../utils/text';
 
 interface UseUnavailableRecoveryOptions {
   inmueble: VitrinaInmueble;
@@ -29,9 +30,9 @@ interface UseUnavailableRecoveryResult {
 }
 
 /**
- * Detecta inmuebles "no disponibles" e intenta recuperarlos vía Wasi → n8n.
- * Si la recuperación aporta datos útiles, notifica al padre con `onRecovered`
- * aunque el efecto se limpie (cambio de pestaña): el listado sigue montado.
+ * Detecta inmuebles sin datos útiles en tarjeta.
+ * Tras el enrichment Wasi→n8n en middleware, la recuperación cliente del
+ * listado queda desactivada (ENABLE_CLIENT_LIST_RECOVERY) para no duplicar scrapes.
  */
 export function useUnavailableRecovery({
   inmueble,
@@ -41,7 +42,7 @@ export function useUnavailableRecovery({
   const displayId = getDisplayPropertyId(inmueble);
   const locationRaw = normalizeDisplayText(inmueble.ubicacion);
   const description = normalizeDisplayText(inmueble.descripcionCorta);
-  const image = normalizeDisplayText(inmueble.imagenUrl);
+  const image = normalizeImageUrl(inmueble.imagenUrl);
   const title = normalizeDisplayText(inmueble.titulo);
   const price = normalizeDisplayText(inmueble.precioFormateado);
   const hasPrice = Boolean(price && !isZeroPrice(price));
@@ -61,15 +62,14 @@ export function useUnavailableRecovery({
   const shellEmpty = isUnavailablePropertyView(inmueble, fields);
   const alreadyUsable = hasUsableListingContent(inmueble, fields);
 
-  // No volver al shell vacío solo porque falle la imagen tras recuperar
-  // (título/precio/_externalDataSource ya bastan para card usable).
   const unavailableByImageFail =
     imageFailed && !displayLocation && !description && !title && !hasPrice && !alreadyUsable;
 
-  const needsRecovery = Boolean(displayId) && !alreadyUsable && (shellEmpty || unavailableByImageFail);
+  const looksUnavailable =
+    Boolean(displayId) && !alreadyUsable && (shellEmpty || unavailableByImageFail);
 
   // Shell visual solo si aún no hay nada útil que mostrar.
-  const unavailable = needsRecovery && !title && !hasPrice;
+  const unavailable = looksUnavailable && !title && !hasPrice;
 
   const [verifying, setVerifying] = useState(false);
   const onRecoveredRef = useRef(onRecovered);
@@ -78,7 +78,7 @@ export function useUnavailableRecovery({
   inmuebleRef.current = inmueble;
 
   useEffect(() => {
-    if (!needsRecovery || !displayId) {
+    if (!ENABLE_CLIENT_LIST_RECOVERY || !looksUnavailable || !displayId) {
       setVerifying(false);
       return;
     }
@@ -98,7 +98,7 @@ export function useUnavailableRecovery({
     return () => {
       active = false;
     };
-  }, [needsRecovery, displayId]);
+  }, [looksUnavailable, displayId]);
 
   return {
     unavailable,

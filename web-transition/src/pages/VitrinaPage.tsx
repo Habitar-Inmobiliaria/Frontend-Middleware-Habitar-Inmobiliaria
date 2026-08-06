@@ -7,6 +7,7 @@ import { useToast } from '../hooks/useToast';
 import { useComentarios } from '../hooks/useComentarios';
 import { useListUnavailableRecovery } from '../hooks/useListUnavailableRecovery';
 import { resolveToken } from '../utils/token';
+import { VITRINA_SLOW_LOAD_MS } from '../api/config';
 import {
   getActionUrl,
   getDisplayPropertyId,
@@ -112,6 +113,7 @@ export default function VitrinaPage() {
   const [entrancePhase, setEntrancePhase] = useState<'off' | 'playing' | 'done'>(() =>
     skipEntrance ? 'done' : 'off',
   );
+  const [slowLoad, setSlowLoad] = useState(false);
   const skeletonStartedAt = useRef(performance.now());
 
   // Histórico: carga diferida la primera vez que se abre la pestaña.
@@ -152,8 +154,18 @@ export default function VitrinaPage() {
     });
   }, []);
 
-  // Recuperación a nivel página: no depende de que la card esté montada.
+  // Recuperación a nivel página (desactivada: enrichment ya corre en middleware).
   useListUnavailableRecovery(inmuebles, handleRecovered);
+
+  // Aviso de paciencia si el GET vitrina tarda (scrapes en backend).
+  useEffect(() => {
+    if (!loading) {
+      setSlowLoad(false);
+      return;
+    }
+    const t = window.setTimeout(() => setSlowLoad(true), VITRINA_SLOW_LOAD_MS);
+    return () => window.clearTimeout(t);
+  }, [loading]);
 
   // Primera visita: skeleton mínimo → exit → stagger.
   // Recargas (cache): skeleton solo mientras loading; sin animación de entrada.
@@ -450,7 +462,7 @@ export default function VitrinaPage() {
   if (loading || bootView === 'skeleton' || bootView === 'exiting') {
     return (
       <div className={bootView === 'exiting' ? styles.skeletonExit : undefined}>
-        <VitrinaSkeleton />
+        <VitrinaSkeleton slowLoad={slowLoad && loading} />
       </div>
     );
   }
@@ -471,6 +483,7 @@ export default function VitrinaPage() {
   }
 
   const asesor = data?.asesor;
+  const alertas = (data?.alertas ?? []).filter((a) => Boolean(String(a || '').trim()));
   const emptyCopy = EMPTY_COPY[activeTab];
   const showHistoricoPagination =
     activeTab === 'historico' &&
@@ -521,6 +534,16 @@ export default function VitrinaPage() {
           <BuscadorCTA />
         </aside>
       </header>
+
+      {alertas.length > 0 && (
+        <div className={styles.alerts} role="status">
+          {alertas.map((alerta) => (
+            <p key={alerta} className={styles.alertItem}>
+              {alerta}
+            </p>
+          ))}
+        </div>
+      )}
 
       <div
         className={`${styles.mainWrap} ${showCommentsSidebar ? styles.mainWrapSplit : ''}`}

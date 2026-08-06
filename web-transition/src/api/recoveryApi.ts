@@ -20,7 +20,7 @@ import {
   type N8nScrapeResult,
   type RecoveredPropertyPayload,
 } from '../utils/recovery';
-import { normalizeDisplayText } from '../utils/text';
+import { normalizeDisplayText, normalizeImageUrl } from '../utils/text';
 
 const WASI_PROBE_TIMEOUT_MS = 12_000;
 const N8N_SCRAPE_TIMEOUT_MS = 18_000;
@@ -213,7 +213,7 @@ export async function tryRecoverUnavailableProperty(
     !hasUsableListingContent(p, {
       location: normalizeDisplayText(p.ubicacion),
       description: normalizeDisplayText(p.descripcionCorta),
-      image: normalizeDisplayText(p.imagenUrl),
+      image: normalizeImageUrl(p.imagenUrl),
     });
 
   const probeData = await getWasiPropertyByReferencia(ref);

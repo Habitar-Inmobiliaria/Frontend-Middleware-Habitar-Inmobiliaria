@@ -17,6 +17,21 @@ export function normalizeDisplayText(value: unknown): string {
   return text;
 }
 
+/**
+ * URL de imagen usable para la UI.
+ * Los placeholders genéricos del middleware (via.placeholder.com, etc.)
+ * se tratan como “sin imagen”.
+ */
+export function normalizeImageUrl(value: unknown): string {
+  const url = normalizeDisplayText(value);
+  if (!url) return '';
+  if (/via\.placeholder\.com/i.test(url)) return '';
+  if (/placehold\.co/i.test(url)) return '';
+  if (/placeholder\.com/i.test(url)) return '';
+  if (/text=Sin[+ ]?Imagen/i.test(url)) return '';
+  return url;
+}
+
 /** true si el precio formateado representa un valor nulo o cero (no mostrar). */
 export function isZeroPrice(rawPrice: string): boolean {
   return !rawPrice || /^\$?\s*0+([.,]0+)?$/.test(rawPrice.trim());

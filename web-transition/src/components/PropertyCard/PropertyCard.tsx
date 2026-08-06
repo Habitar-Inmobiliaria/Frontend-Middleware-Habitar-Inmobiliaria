@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { VitrinaInmueble } from '../../api/types';
 import type { TabId } from '../../utils/estado';
-import { isZeroPrice, normalizeDisplayText } from '../../utils/text';
+import { isZeroPrice, normalizeDisplayText, normalizeImageUrl } from '../../utils/text';
 import { useUnavailableRecovery } from '../../hooks/useUnavailableRecovery';
 import ActionBar, { type CardAccion } from '../ActionBar/ActionBar';
 import styles from './PropertyCard.module.css';
@@ -17,8 +17,9 @@ interface PropertyCardProps {
 }
 
 // Tarjeta de un inmueble. Presenta imagen, precio, ID, título, ubicación,
-// descripción y las acciones según la pestaña activa. Si el listado llega
-// vacío, intenta recuperar datos vía Wasi → n8n.
+// descripción y las acciones según la pestaña activa.
+// El enrichment Wasi→n8n del listado vive en el middleware; la card solo
+// muestra shell vacío si el ítem llega sin datos útiles.
 export default function PropertyCard({
   inmueble,
   activeTab,
@@ -29,7 +30,7 @@ export default function PropertyCard({
 }: PropertyCardProps) {
   const [imageFailed, setImageFailed] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const imageUrl = normalizeDisplayText(inmueble.imagenUrl);
+  const imageUrl = normalizeImageUrl(inmueble.imagenUrl);
 
   // Si la recuperación cambia la URL, permitir reintentar la carga.
   useEffect(() => {

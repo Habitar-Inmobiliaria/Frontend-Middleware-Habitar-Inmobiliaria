@@ -7,7 +7,7 @@
 
 import type { PropertyDetail, VitrinaInmueble } from '../api/types';
 import { extractPropertyIdFromUrl, getDisplayPropertyId } from './property';
-import { normalizeDisplayText } from './text';
+import { normalizeDisplayText, normalizeImageUrl } from './text';
 
 /** Payload crudo/normalizado que puede venir de Wasi o n8n. */
 export type RecoveredPropertyPayload = Record<string, unknown>;
@@ -105,7 +105,7 @@ export function isUnavailablePropertyView(
 ): boolean {
   const location = normalizeDisplayText(normalized.location ?? prop?.ubicacion);
   const description = normalizeDisplayText(normalized.description ?? prop?.descripcionCorta);
-  const image = normalizeDisplayText(normalized.image ?? prop?.imagenUrl);
+  const image = normalizeImageUrl(normalized.image ?? prop?.imagenUrl);
   return !image && !location && !description;
 }
 

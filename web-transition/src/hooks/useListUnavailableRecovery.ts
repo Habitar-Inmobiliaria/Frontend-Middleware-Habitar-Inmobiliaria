@@ -1,9 +1,10 @@
 import { useEffect, useRef } from 'react';
 import type { VitrinaInmueble } from '../api/types';
+import { ENABLE_CLIENT_LIST_RECOVERY } from '../api/config';
 import { recoveryApi } from '../api/recoveryApi';
 import { hasUsableListingContent, isUnavailablePropertyView } from '../utils/recovery';
 import { getDisplayPropertyId } from '../utils/property';
-import { normalizeDisplayText } from '../utils/text';
+import { normalizeDisplayText, normalizeImageUrl } from '../utils/text';
 
 const MAX_ATTEMPTS = 3;
 const RETRY_BASE_MS = 1600;
@@ -13,9 +14,8 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Recupera en segundo plano todos los inmuebles "no disponibles" del listado.
- * Vive a nivel de página (no de card), así el resultado se aplica aunque el
- * usuario cambie de pestaña y la card se desmonte a mitad de la petición.
+ * Recupera en segundo plano inmuebles vacíos del listado.
+ * Desactivado por defecto: el middleware ya hace Wasi → n8n en el GET vitrina.
  */
 export function useListUnavailableRecovery(
   inmuebles: VitrinaInmueble[],
@@ -23,10 +23,11 @@ export function useListUnavailableRecovery(
 ): void {
   const onRecoveredRef = useRef(onRecovered);
   onRecoveredRef.current = onRecovered;
-  /** Evita disparar la misma referencia en paralelo; se libera si agota reintentos. */
   const inFlightRef = useRef(new Set<string>());
 
   useEffect(() => {
+    if (!ENABLE_CLIENT_LIST_RECOVERY) return;
+
     for (const prop of inmuebles) {
       const id = getDisplayPropertyId(prop);
       if (!id || inFlightRef.current.has(id)) continue;
@@ -34,7 +35,7 @@ export function useListUnavailableRecovery(
       const fields = {
         location: normalizeDisplayText(prop.ubicacion),
         description: normalizeDisplayText(prop.descripcionCorta),
-        image: normalizeDisplayText(prop.imagenUrl),
+        image: normalizeImageUrl(prop.imagenUrl),
       };
       if (hasUsableListingContent(prop, fields)) continue;
       if (!isUnavailablePropertyView(prop, fields)) continue;
@@ -57,9 +58,8 @@ export function useListUnavailableRecovery(
             }
           }
         } catch {
-          /* se libera abajo para permitir otro ciclo si el listado cambia */
+          /* se libera abajo */
         } finally {
-          // Si recuperó, dejamos el id marcado para no re-disparar en este ciclo de página.
           if (!recovered) inFlightRef.current.delete(id);
         }
       })();
