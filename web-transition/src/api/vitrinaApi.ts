@@ -238,7 +238,6 @@ async function refreshVitrinaInBackground(
 ): Promise<void> {
   if (!onUpdate) return;
 
-  let best = painted;
   let bestFp = vitrinaListFingerprint(painted);
   let backoff = VITRINA_503_BACKOFF_MS;
   const maxRounds = Math.max(VITRINA_503_MAX_RETRIES, VITRINA_FETCH_ATTEMPTS);
@@ -259,7 +258,6 @@ async function refreshVitrinaInBackground(
 
       if (!changed && !completeOk) continue;
 
-      best = next;
       bestFp = nextFp;
       saveVitrinaSessionCache(token, next);
       onUpdate(next, { authoritative: r.outcome === 'ok' });
