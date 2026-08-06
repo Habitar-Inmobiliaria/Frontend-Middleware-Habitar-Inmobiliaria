@@ -28,7 +28,8 @@ interface UseUnavailableRecoveryResult {
 
 /**
  * Detecta inmuebles "no disponibles" e intenta recuperarlos vía Wasi → n8n.
- * Si la recuperación aporta datos útiles, notifica al padre con `onRecovered`.
+ * Si la recuperación aporta datos útiles, notifica al padre con `onRecovered`
+ * aunque el efecto se limpie (cambio de pestaña): el listado sigue montado.
  */
 export function useUnavailableRecovery({
   inmueble,
@@ -62,23 +63,28 @@ export function useUnavailableRecovery({
   inmuebleRef.current = inmueble;
 
   useEffect(() => {
-    if (!unavailable || !displayId) return;
+    if (!unavailable || !displayId) {
+      setVerifying(false);
+      return;
+    }
 
-    let cancelled = false;
+    let active = true;
     setVerifying(true);
 
     recoveryApi
       .tryRecoverUnavailableProperty(inmuebleRef.current, displayId)
       .then((updated) => {
-        if (cancelled || !updated) return;
-        onRecoveredRef.current(updated);
+        // Siempre fusionar en el padre: sobrevive desmontaje de la card
+        // (p. ej. cambio de pestaña) y evita quedar en "no disponible" con
+        // datos ya recuperados en caché.
+        if (updated) onRecoveredRef.current(updated);
       })
       .finally(() => {
-        if (!cancelled) setVerifying(false);
+        if (active) setVerifying(false);
       });
 
     return () => {
-      cancelled = true;
+      active = false;
     };
   }, [unavailable, displayId]);
 

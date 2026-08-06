@@ -105,8 +105,9 @@ async function getWasiPropertyByReferencia(
   const probePromise = (async () => {
     try {
       const res = await fetch(url, { headers: TUNNEL_HEADERS });
+      // Solo cachear 404 (definitivo). 5xx/429/red no se cachean para permitir reintento.
       if (!res.ok) {
-        unavailableProbeCache.set(cacheKey, null);
+        if (res.status === 404) unavailableProbeCache.set(cacheKey, null);
         return null;
       }
       const raw = await res.json();
@@ -114,7 +115,7 @@ async function getWasiPropertyByReferencia(
       unavailableProbeCache.set(cacheKey, normalized || null);
       return normalized || null;
     } catch {
-      unavailableProbeCache.set(cacheKey, null);
+      // Error de red / abort: no cachear como fallo definitivo.
       return null;
     } finally {
       unavailableProbeInFlight.delete(cacheKey);
@@ -162,10 +163,9 @@ async function scrapeInmuebleByReferencia(referencia: string): Promise<N8nScrape
         return parsed;
       }
 
-      n8nScrapeCache.set(cacheKey, { data: null, rejection: null });
+      // 5xx/otros: no cachear para poder reintentar al volver a la pestaña.
       return { data: null, rejection: null };
     } catch {
-      n8nScrapeCache.set(cacheKey, { data: null, rejection: null });
       return { data: null, rejection: null };
     } finally {
       n8nScrapeInFlight.delete(cacheKey);

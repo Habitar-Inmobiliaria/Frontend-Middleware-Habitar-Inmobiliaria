@@ -49,11 +49,14 @@ export function getDisplayPropertyId(inmueble: VitrinaInmueble): string {
 
 /** Clave estable y única para renderizar un inmueble en una lista. */
 export function getInmuebleKey(inmueble: VitrinaInmueble, index: number): string {
-  return getStableId(inmueble) || `inmueble-${index}`;
+  // Preferir displayId: no cambia cuando la recuperación añade urlReferencia.
+  return getDisplayPropertyId(inmueble) || getStableId(inmueble) || `inmueble-${index}`;
 }
 
 /** Identificador estable (sin recurrir al índice); '' si no hay ninguno. */
 export function getStableId(inmueble: VitrinaInmueble): string {
+  const displayId = getDisplayPropertyId(inmueble);
+  if (displayId) return displayId;
   const candidate =
     inmueble.id || inmueble.urlReferencia || inmueble.url || inmueble.codigoNumerico;
   return candidate ? String(candidate) : '';

@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useParams } from 'react-router-dom';
 import type { VitrinaInmueble } from '../api/types';
 import { vitrinaApi } from '../api/vitrinaApi';
 import { useVitrina } from '../hooks/useVitrina';
 import { useToast } from '../hooks/useToast';
 import { useComentarios } from '../hooks/useComentarios';
+import { useListUnavailableRecovery } from '../hooks/useListUnavailableRecovery';
 import { resolveToken } from '../utils/token';
 import {
   getActionUrl,
@@ -49,6 +50,15 @@ import styles from './VitrinaPage.module.css';
 const ERROR_GENERICO = '⚠ Hubo un problema, intenta de nuevo.';
 
 type ListTabId = Exclude<TabId, 'historico'>;
+
+function matchesRecovered(a: VitrinaInmueble, b: VitrinaInmueble): boolean {
+  const aStable = getStableId(a);
+  const bStable = getStableId(b);
+  if (aStable && bStable && aStable === bStable) return true;
+  const aDisp = getDisplayPropertyId(a);
+  const bDisp = getDisplayPropertyId(b);
+  return Boolean(aDisp && bDisp && aDisp === bDisp);
+}
 
 // Mensajes de estado vacío por pestaña (portado de EMPTY_COPY vanilla).
 const EMPTY_COPY: Record<TabId, { title: string; desc: string }> = {
@@ -119,6 +129,31 @@ export default function VitrinaPage() {
   useEffect(() => {
     setInmuebles(data?.inmuebles ?? []);
   }, [data]);
+
+  /** Fusiona datos recuperados (Wasi/n8n) en listado e histórico. */
+  const handleRecovered = useCallback((updated: VitrinaInmueble) => {
+    setInmuebles((prev) => {
+      let changed = false;
+      const next = prev.map((i) => {
+        if (!matchesRecovered(i, updated)) return i;
+        changed = true;
+        return { ...i, ...updated };
+      });
+      return changed ? next : prev;
+    });
+    setHistoricoData((prev) => {
+      let changed = false;
+      const next = prev.map((i) => {
+        if (!matchesRecovered(i, updated)) return i;
+        changed = true;
+        return { ...i, ...updated };
+      });
+      return changed ? next : prev;
+    });
+  }, []);
+
+  // Recuperación a nivel página: no depende de que la card esté montada.
+  useListUnavailableRecovery(inmuebles, handleRecovered);
 
   // Primera visita: skeleton mínimo → exit → stagger.
   // Recargas (cache): skeleton solo mientras loading; sin animación de entrada.
@@ -279,25 +314,6 @@ export default function VitrinaPage() {
 
   function setEstadoLocal(inmueble: VitrinaInmueble, nuevoEstado: string) {
     setInmuebles((prev) => prev.map((i) => (i === inmueble ? { ...i, estado: nuevoEstado } : i)));
-  }
-
-  function matchesRecovered(a: VitrinaInmueble, b: VitrinaInmueble): boolean {
-    const aStable = getStableId(a);
-    const bStable = getStableId(b);
-    if (aStable && bStable && aStable === bStable) return true;
-    const aDisp = getDisplayPropertyId(a);
-    const bDisp = getDisplayPropertyId(b);
-    return Boolean(aDisp && bDisp && aDisp === bDisp);
-  }
-
-  /** Fusiona datos recuperados (Wasi/n8n) en listado e histórico. */
-  function handleRecovered(updated: VitrinaInmueble) {
-    setInmuebles((prev) =>
-      prev.map((i) => (matchesRecovered(i, updated) ? { ...i, ...updated } : i)),
-    );
-    setHistoricoData((prev) =>
-      prev.map((i) => (matchesRecovered(i, updated) ? { ...i, ...updated } : i)),
-    );
   }
 
   function markProcessing(stableId: string, active: boolean) {
