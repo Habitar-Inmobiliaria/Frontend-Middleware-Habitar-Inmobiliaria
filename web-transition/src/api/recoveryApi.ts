@@ -12,7 +12,7 @@ import {
   applyLocationRestrictionToProperty,
   applyWasiProbeDataToProperty,
   buildRecoveredDetailForCache,
-  isUnavailablePropertyView,
+  hasUsableListingContent,
   normalizeWasiProbePayload,
   parseN8nScrapeResponseBody,
   unwrapN8nScrapeCacheEntry,
@@ -20,6 +20,23 @@ import {
   type RecoveredPropertyPayload,
 } from '../utils/recovery';
 import { normalizeDisplayText } from '../utils/text';
+
+const WASI_PROBE_TIMEOUT_MS = 12_000;
+const N8N_SCRAPE_TIMEOUT_MS = 18_000;
+
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit | undefined,
+  timeoutMs: number,
+): Promise<Response> {
+  const ctrl = new AbortController();
+  const timer = window.setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: ctrl.signal });
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
 
 // ------------------------------------------------------------
 // Cachés en memoria (paridad con el vanilla)
@@ -104,7 +121,7 @@ async function getWasiPropertyByReferencia(
 
   const probePromise = (async () => {
     try {
-      const res = await fetch(url, { headers: TUNNEL_HEADERS });
+      const res = await fetchWithTimeout(url, { headers: TUNNEL_HEADERS }, WASI_PROBE_TIMEOUT_MS);
       // Solo cachear 404 (definitivo). 5xx/429/red no se cachean para permitir reintento.
       if (!res.ok) {
         if (res.status === 404) unavailableProbeCache.set(cacheKey, null);
@@ -140,11 +157,15 @@ async function scrapeInmuebleByReferencia(referencia: string): Promise<N8nScrape
 
   const scrapePromise = (async (): Promise<N8nScrapeResult> => {
     try {
-      const res = await fetch(N8N_SCRAPE_INMUEBLE_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: ref }),
-      });
+      const res = await fetchWithTimeout(
+        N8N_SCRAPE_INMUEBLE_URL,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: ref }),
+        },
+        N8N_SCRAPE_TIMEOUT_MS,
+      );
 
       let body: unknown = {};
       try {
@@ -188,9 +209,10 @@ export async function tryRecoverUnavailableProperty(
   if (!ref || !prop) return null;
 
   const stillUnavailable = (p: VitrinaInmueble) =>
-    isUnavailablePropertyView(p, {
+    !hasUsableListingContent(p, {
       location: normalizeDisplayText(p.ubicacion),
       description: normalizeDisplayText(p.descripcionCorta),
+      image: normalizeDisplayText(p.imagenUrl),
     });
 
   const probeData = await getWasiPropertyByReferencia(ref);

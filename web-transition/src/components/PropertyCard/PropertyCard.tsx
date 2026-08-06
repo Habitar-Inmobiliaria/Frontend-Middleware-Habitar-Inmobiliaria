@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { VitrinaInmueble } from '../../api/types';
 import type { TabId } from '../../utils/estado';
 import { isZeroPrice, normalizeDisplayText } from '../../utils/text';
@@ -29,6 +29,13 @@ export default function PropertyCard({
 }: PropertyCardProps) {
   const [imageFailed, setImageFailed] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const imageUrl = normalizeDisplayText(inmueble.imagenUrl);
+
+  // Si la recuperación cambia la URL, permitir reintentar la carga.
+  useEffect(() => {
+    setImageFailed(false);
+    setImageLoaded(false);
+  }, [imageUrl]);
 
   const { unavailable, verifying, displayId, displayLocation } = useUnavailableRecovery({
     inmueble,
@@ -38,7 +45,7 @@ export default function PropertyCard({
 
   const title = normalizeDisplayText(inmueble.titulo);
   const description = normalizeDisplayText(inmueble.descripcionCorta);
-  const image = normalizeDisplayText(inmueble.imagenUrl);
+  const image = imageUrl;
 
   const rawPrice = inmueble.precioFormateado || '';
   const showPrice = !isZeroPrice(rawPrice);

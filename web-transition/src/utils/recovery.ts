@@ -109,6 +109,28 @@ export function isUnavailablePropertyView(
   return !image && !location && !description;
 }
 
+/**
+ * Contenido suficiente para mostrar una tarjeta usable (no el shell
+ * "Inmueble no disponible"). Incluye título/precio tras recuperación Wasi/n8n.
+ */
+export function hasUsableListingContent(
+  prop: VitrinaInmueble | null | undefined,
+  normalized: {
+    location?: string;
+    description?: string;
+    image?: string;
+  } = {},
+): boolean {
+  if (!prop) return false;
+  if (!isUnavailablePropertyView(prop, normalized)) return true;
+  const title = normalizeDisplayText(prop.titulo);
+  const price = normalizeDisplayText(prop.precioFormateado);
+  if (title) return true;
+  if (price && !/^\$?\s*0+([.,]0+)?$/.test(price)) return true;
+  if (prop._externalDataSource || prop._fromHistorico) return true;
+  return false;
+}
+
 export function normalizeWasiProbePayload(payload: unknown): RecoveredPropertyPayload | null {
   if (!payload) return null;
 

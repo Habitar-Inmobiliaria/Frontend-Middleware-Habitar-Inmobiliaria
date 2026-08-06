@@ -5,11 +5,12 @@ import {
   wasExternallyRecoveredByReferencia,
 } from '../api/recoveryApi';
 import {
+  hasUsableListingContent,
   isUnavailablePropertyView,
   shouldRestrictPropertyLocation,
 } from '../utils/recovery';
 import { getDisplayPropertyId } from '../utils/property';
-import { normalizeDisplayText } from '../utils/text';
+import { isZeroPrice, normalizeDisplayText } from '../utils/text';
 
 interface UseUnavailableRecoveryOptions {
   inmueble: VitrinaInmueble;
@@ -19,6 +20,7 @@ interface UseUnavailableRecoveryOptions {
 }
 
 interface UseUnavailableRecoveryResult {
+  /** Mostrar el shell "Inmueble no disponible". */
   unavailable: boolean;
   verifying: boolean;
   displayId: string;
@@ -40,6 +42,9 @@ export function useUnavailableRecovery({
   const locationRaw = normalizeDisplayText(inmueble.ubicacion);
   const description = normalizeDisplayText(inmueble.descripcionCorta);
   const image = normalizeDisplayText(inmueble.imagenUrl);
+  const title = normalizeDisplayText(inmueble.titulo);
+  const price = normalizeDisplayText(inmueble.precioFormateado);
+  const hasPrice = Boolean(price && !isZeroPrice(price));
 
   const locationRestricted = shouldRestrictPropertyLocation(
     inmueble,
@@ -47,14 +52,24 @@ export function useUnavailableRecovery({
   );
   const displayLocation = locationRestricted ? '' : locationRaw;
 
-  const unavailableByData = isUnavailablePropertyView(inmueble, {
+  const fields = {
     location: displayLocation,
     description,
     image,
-  });
-  // Si la imagen falla y no hay contenido útil, tratar como no disponible.
-  const unavailableByImageFail = imageFailed && !displayLocation && !description;
-  const unavailable = unavailableByData || unavailableByImageFail;
+  };
+
+  const shellEmpty = isUnavailablePropertyView(inmueble, fields);
+  const alreadyUsable = hasUsableListingContent(inmueble, fields);
+
+  // No volver al shell vacío solo porque falle la imagen tras recuperar
+  // (título/precio/_externalDataSource ya bastan para card usable).
+  const unavailableByImageFail =
+    imageFailed && !displayLocation && !description && !title && !hasPrice && !alreadyUsable;
+
+  const needsRecovery = Boolean(displayId) && !alreadyUsable && (shellEmpty || unavailableByImageFail);
+
+  // Shell visual solo si aún no hay nada útil que mostrar.
+  const unavailable = needsRecovery && !title && !hasPrice;
 
   const [verifying, setVerifying] = useState(false);
   const onRecoveredRef = useRef(onRecovered);
@@ -63,7 +78,7 @@ export function useUnavailableRecovery({
   inmuebleRef.current = inmueble;
 
   useEffect(() => {
-    if (!unavailable || !displayId) {
+    if (!needsRecovery || !displayId) {
       setVerifying(false);
       return;
     }
@@ -74,9 +89,6 @@ export function useUnavailableRecovery({
     recoveryApi
       .tryRecoverUnavailableProperty(inmuebleRef.current, displayId)
       .then((updated) => {
-        // Siempre fusionar en el padre: sobrevive desmontaje de la card
-        // (p. ej. cambio de pestaña) y evita quedar en "no disponible" con
-        // datos ya recuperados en caché.
         if (updated) onRecoveredRef.current(updated);
       })
       .finally(() => {
@@ -86,7 +98,7 @@ export function useUnavailableRecovery({
     return () => {
       active = false;
     };
-  }, [unavailable, displayId]);
+  }, [needsRecovery, displayId]);
 
   return {
     unavailable,

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { VitrinaInmueble } from '../api/types';
 import { recoveryApi } from '../api/recoveryApi';
-import { isUnavailablePropertyView } from '../utils/recovery';
+import { hasUsableListingContent, isUnavailablePropertyView } from '../utils/recovery';
 import { getDisplayPropertyId } from '../utils/property';
 import { normalizeDisplayText } from '../utils/text';
 
@@ -31,12 +31,13 @@ export function useListUnavailableRecovery(
       const id = getDisplayPropertyId(prop);
       if (!id || inFlightRef.current.has(id)) continue;
 
-      const unavailable = isUnavailablePropertyView(prop, {
+      const fields = {
         location: normalizeDisplayText(prop.ubicacion),
         description: normalizeDisplayText(prop.descripcionCorta),
         image: normalizeDisplayText(prop.imagenUrl),
-      });
-      if (!unavailable) continue;
+      };
+      if (hasUsableListingContent(prop, fields)) continue;
+      if (!isUnavailablePropertyView(prop, fields)) continue;
 
       inFlightRef.current.add(id);
       const snapshot = prop;
