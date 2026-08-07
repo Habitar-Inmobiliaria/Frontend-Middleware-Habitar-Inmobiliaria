@@ -33,9 +33,7 @@ import FeedbackModal from '../components/modals/FeedbackModal';
 import LoadingModal from '../components/modals/LoadingModal';
 import SuccessModal from '../components/modals/SuccessModal';
 import DetailModal from '../components/DetailModal/DetailModal';
-import ImportantInfoSidebar, {
-  hasVisibleComments,
-} from '../components/ImportantInfoSidebar/ImportantInfoSidebar';
+import ImportantInfoSidebar from '../components/ImportantInfoSidebar/ImportantInfoSidebar';
 import TutorialModal from '../components/TutorialModal/TutorialModal';
 import WhatsAppFloat from '../components/WhatsAppFloat/WhatsAppFloat';
 import VitrinaSkeleton from '../components/VitrinaSkeleton/VitrinaSkeleton';
@@ -43,6 +41,7 @@ import { hasSeenTutorial, markTutorialSeen } from '../utils/tutorial';
 import { hasSeenEntrance, markEntranceSeen } from '../utils/entrance';
 import { tryNotifyVitrinaVisitOnce } from '../utils/visita';
 import { normalizeDisplayText } from '../utils/text';
+import { hasVisibleComments } from '../utils/comment';
 import {
   DELAY_CHILDREN_MS,
   entranceTotalMs,
@@ -129,11 +128,17 @@ export default function VitrinaPage() {
   const [historicoLoading, setHistoricoLoading] = useState(false);
   const [historicoPage, setHistoricoPage] = useState(1);
 
-  // Comentarios: carga diferida al entrar en Me interesa / Visitados.
-  const commentsTab = activeTab === 'aprobadas' || activeTab === 'visitados';
-  const { comments, loaded: commentsLoaded } = useComentarios(token, commentsTab);
+  // Comentarios del asesor: se cargan con el token y se muestran en cada pestaña de listado.
+  const {
+    comments,
+    loaded: commentsLoaded,
+    refresh: refreshComments,
+  } = useComentarios(token ?? '', Boolean(token));
   const showCommentsSidebar =
-    commentsTab && commentsLoaded && hasVisibleComments(comments, activeTab);
+    Boolean(token) &&
+    activeTab !== 'historico' &&
+    commentsLoaded &&
+    hasVisibleComments(comments, activeTab);
 
   useEffect(() => {
     if (!data) {
@@ -441,6 +446,7 @@ export default function VitrinaPage() {
             getDisplayPropertyId(inmueble),
             trimmed,
           );
+          refreshComments();
           setLoadingModal(false);
           setSuccessModal(true);
         } catch (err) {
@@ -653,15 +659,15 @@ export default function VitrinaPage() {
           </section>
         )}
 
-        {showCommentsSidebar && (activeTab === 'aprobadas' || activeTab === 'visitados') && (
+        {showCommentsSidebar ? (
           <ImportantInfoSidebar
             comments={comments}
-            activeTab={activeTab}
+            activeTab={activeTab as Exclude<TabId, 'historico'>}
             onNotFound={(code) =>
               showToast(`No se encontró el inmueble ${code} en esta lista.`)
             }
           />
-        )}
+        ) : null}
       </div>
 
       {showHistoricoPagination && (

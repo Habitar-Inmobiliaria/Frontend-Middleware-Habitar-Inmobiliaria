@@ -1,30 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ComentarioListing } from '../../api/types';
 import type { TabId } from '../../utils/estado';
-import { formatCommentDate, getCommentEstado } from '../../utils/comment';
+import {
+  filterCommentsForTab,
+  formatCommentDate,
+  hasVisibleComments,
+} from '../../utils/comment';
 import { normalizeDisplayText } from '../../utils/text';
 import styles from './ImportantInfoSidebar.module.css';
+
+export { hasVisibleComments };
 
 const MOBILE_DOCK_MQ = '(max-width: 900px)';
 const HIGHLIGHT_MS = 2800;
 
 interface ImportantInfoSidebarProps {
   comments: ComentarioListing[];
-  activeTab: Extract<TabId, 'aprobadas' | 'visitados'>;
+  /** Cualquier pestaña de listado; en Histórico no se monta. */
+  activeTab: Exclude<TabId, 'historico'>;
   onNotFound?: (code: string) => void;
-}
-
-function filterComments(
-  comments: ComentarioListing[],
-  activeTab: 'aprobadas' | 'visitados',
-): ComentarioListing[] {
-  return comments.filter((item) => {
-    const estado = getCommentEstado(item);
-    if (!estado) return true;
-    if (activeTab === 'aprobadas') return estado === 'APROBADO';
-    if (activeTab === 'visitados') return estado === 'VISITADO';
-    return false;
-  });
 }
 
 function findPropertyCard(code: string): HTMLElement | null {
@@ -78,9 +72,9 @@ function scrollToPropertyCard(code: string, onNotFound?: (code: string) => void)
 }
 
 /**
- * Sidebar «Información Importante» embebido en Me interesa / Visitados.
- * Solo se monta cuando hay comentarios; en desktop queda sticky al lado del grid,
- * en móvil actúa como dock inferior colapsable.
+ * Sidebar «Información Importante» con comentarios del asesor/cliente.
+ * Se muestra en cualquier pestaña de listado cuando hay comentarios
+ * del estado correspondiente (Sin revisar, Me interesa, Descartadas, Visitados).
  */
 export default function ImportantInfoSidebar({
   comments,
@@ -113,7 +107,7 @@ export default function ImportantInfoSidebar({
   }, [mobileDock, collapsed]);
 
   const filtered = useMemo(
-    () => filterComments(comments, activeTab),
+    () => filterCommentsForTab(comments, activeTab),
     [comments, activeTab],
   );
 
@@ -202,12 +196,4 @@ export default function ImportantInfoSidebar({
       </div>
     </section>
   );
-}
-
-/** Indica si el sidebar debe ocupar el layout split (hay comentarios filtrados). */
-export function hasVisibleComments(
-  comments: ComentarioListing[],
-  activeTab: 'aprobadas' | 'visitados',
-): boolean {
-  return filterComments(comments, activeTab).length > 0;
 }

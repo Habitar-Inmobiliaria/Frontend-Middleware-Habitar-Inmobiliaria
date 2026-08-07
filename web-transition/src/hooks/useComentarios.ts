@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { ComentarioListing } from '../api/types';
 import { vitrinaApi } from '../api/vitrinaApi';
 
@@ -6,19 +6,26 @@ interface UseComentariosState {
   comments: ComentarioListing[];
   loading: boolean;
   loaded: boolean;
+  /** Vuelve a pedir el listado (p. ej. tras publicar un comentario). */
+  refresh: () => void;
 }
 
 /**
- * Carga los comentarios del cliente la primera vez que `enabled` es true
- * (pestañas Me interesa / Visitados). Si falla, deja lista vacía (como el vanilla).
+ * Carga los comentarios del asesor/cliente cuando `enabled` es true.
+ * Incluye refresh para reconsultar tras altas o al volver a la pestaña.
  */
 export function useComentarios(token: string, enabled: boolean): UseComentariosState {
   const [comments, setComments] = useState<ComentarioListing[]>([]);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
+
+  const refresh = useCallback(() => {
+    setReloadToken((n) => n + 1);
+  }, []);
 
   useEffect(() => {
-    if (!enabled || !token || loaded) return;
+    if (!enabled || !token) return;
 
     let cancelled = false;
     setLoading(true);
@@ -43,7 +50,28 @@ export function useComentarios(token: string, enabled: boolean): UseComentariosS
     return () => {
       cancelled = true;
     };
-  }, [enabled, token, loaded]);
+  }, [enabled, token, reloadToken]);
 
-  return { comments, loading, loaded };
+  // Si el asesor agregó comentarios en HubSpot, refrescar al volver a la vitrina.
+  useEffect(() => {
+    if (!enabled || !token || !loaded) return;
+
+    let lastAt = 0;
+    const softRefresh = () => {
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      if (now - lastAt < 2500) return;
+      lastAt = now;
+      refresh();
+    };
+
+    document.addEventListener('visibilitychange', softRefresh);
+    window.addEventListener('focus', softRefresh);
+    return () => {
+      document.removeEventListener('visibilitychange', softRefresh);
+      window.removeEventListener('focus', softRefresh);
+    };
+  }, [enabled, token, loaded, refresh]);
+
+  return { comments, loading, loaded, refresh };
 }
