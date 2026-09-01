@@ -13,21 +13,23 @@ export function normalizeSearchQuery(value: string): string {
 }
 
 /**
- * Coincide por título (nombre) o código/id del inmueble.
- * Búsqueda parcial, sin distinguir mayúsculas/acentos.
+ * Coincide por título, código o id. `normalizedQuery` debe venir de normalizeSearchQuery.
  */
 export function matchesInmuebleSearch(
   inmueble: VitrinaInmueble,
-  rawQuery: string,
+  normalizedQuery: string,
 ): boolean {
-  const query = normalizeSearchQuery(rawQuery);
-  if (!query) return true;
+  if (!normalizedQuery) return true;
 
   const title = normalizeSearchQuery(normalizeDisplayText(inmueble.titulo));
   const id = normalizeSearchQuery(getDisplayPropertyId(inmueble));
   const codigo = normalizeSearchQuery(String(inmueble.codigoNumerico || inmueble.id || ''));
 
-  return title.includes(query) || id.includes(query) || codigo.includes(query);
+  return (
+    title.includes(normalizedQuery) ||
+    id.includes(normalizedQuery) ||
+    codigo.includes(normalizedQuery)
+  );
 }
 
 export function filterInmueblesBySearch(

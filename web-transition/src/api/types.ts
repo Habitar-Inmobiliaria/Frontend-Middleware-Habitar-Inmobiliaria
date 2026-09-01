@@ -60,6 +60,8 @@ export interface VitrinaInmueble {
   _omittedFromApi?: boolean;
   /** Meta del registro de histórico (solo pestaña Histórico). */
   _historyMeta?: HistoricoInmueble;
+  /** Detalle del histórico aún no cargado para la página visible. */
+  _historicoDetailPending?: boolean;
 }
 
 /** Respuesta del GET /vitrina/{token}. */

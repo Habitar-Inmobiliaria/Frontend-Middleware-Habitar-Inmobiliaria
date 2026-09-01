@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { PropertyDetail, VitrinaInmueble } from '../api/types';
 import { vitrinaApi } from '../api/vitrinaApi';
 import { getDisplayPropertyId } from '../utils/property';
@@ -9,8 +9,7 @@ interface UsePropertyDetailState {
   error: string;
 }
 
-// Carga el detalle de un inmueble cuando `inmueble` deja de ser null.
-// Prefiere el id visible (referencia Wasi) y pasa el listProp para recuperación.
+// Carga el detalle por ID estable; listProp se lee al pedir (ref) para no re-fetch al merge del listado.
 export function usePropertyDetail(
   token: string,
   inmueble: VitrinaInmueble | null,
@@ -19,15 +18,21 @@ export function usePropertyDetail(
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const detailId = inmueble
+    ? getDisplayPropertyId(inmueble) || String(inmueble.id || '').trim()
+    : '';
+
+  const listPropRef = useRef(inmueble);
+  listPropRef.current = inmueble;
+
   useEffect(() => {
-    if (!inmueble) {
+    if (!detailId) {
       setData(null);
       setError('');
       setLoading(false);
       return;
     }
 
-    const detailId = getDisplayPropertyId(inmueble) || String(inmueble.id || '').trim();
     let cancelled = false;
 
     setLoading(true);
@@ -35,7 +40,10 @@ export function usePropertyDetail(
     setData(null);
 
     vitrinaApi
-      .getPropertyDetail(token, detailId, { cancelPrevious: true, listProp: inmueble })
+      .getPropertyDetail(token, detailId, {
+        cancelPrevious: true,
+        listProp: listPropRef.current,
+      })
       .then((d) => {
         if (cancelled) return;
         if (d) setData(d);
@@ -51,7 +59,7 @@ export function usePropertyDetail(
     return () => {
       cancelled = true;
     };
-  }, [token, inmueble]);
+  }, [token, detailId]);
 
   return { data, loading, error };
 }

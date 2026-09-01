@@ -6,10 +6,11 @@
 // Al volver a la pestaña hace softRefresh para no quedar con session stale.
 // ============================================================
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { vitrinaApi } from '../api/vitrinaApi';
 import type { VitrinaResponse } from '../api/types';
 import { mergeInmuebleLists } from '../utils/recovery';
+import { usePageVisibilityRefresh } from './usePageVisibilityRefresh';
 
 export interface UseVitrinaState {
   data: VitrinaResponse | null;
@@ -39,6 +40,10 @@ export function useVitrina(token: string | undefined): UseVitrinaState {
     error: null,
   });
 
+  const onUpdateRef = useRef<
+    (fresh: VitrinaResponse, meta?: { authoritative?: boolean }) => void
+  >(() => undefined);
+
   useEffect(() => {
     if (!token) {
       setState({ data: null, loading: false, error: 'Token no proporcionado.' });
@@ -57,6 +62,7 @@ export function useVitrina(token: string | undefined): UseVitrinaState {
         error: null,
       }));
     };
+    onUpdateRef.current = onUpdate;
 
     vitrinaApi
       .getVitrina(token, { onUpdate })
@@ -73,25 +79,15 @@ export function useVitrina(token: string | undefined): UseVitrinaState {
         );
       });
 
-    // Tras cambios en HubSpot + invalidate, el usuario vuelve a esta pestaña:
-    // forzar GET fresco sin dejar sessionStorage como fuente de verdad.
-    let lastSoftRefreshAt = 0;
-    const softRefresh = () => {
-      if (cancelled || document.visibilityState !== 'visible') return;
-      const now = Date.now();
-      if (now - lastSoftRefreshAt < 2500) return;
-      lastSoftRefreshAt = now;
-      void vitrinaApi.softRefreshVitrina(token, onUpdate);
-    };
-    document.addEventListener('visibilitychange', softRefresh);
-    window.addEventListener('focus', softRefresh);
-
     return () => {
       cancelled = true;
-      document.removeEventListener('visibilitychange', softRefresh);
-      window.removeEventListener('focus', softRefresh);
     };
   }, [token]);
+
+  usePageVisibilityRefresh(() => {
+    if (!token) return;
+    void vitrinaApi.softRefreshVitrina(token, onUpdateRef.current);
+  }, Boolean(token));
 
   return state;
 }

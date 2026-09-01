@@ -1,10 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
 import type { VitrinaInmueble } from '../api/types';
 import { ENABLE_CLIENT_LIST_RECOVERY } from '../api/config';
-import {
-  recoveryApi,
-  wasExternallyRecoveredByReferencia,
-} from '../api/recoveryApi';
+import { wasExternallyRecoveredByReferencia } from '../api/recoveryApi';
 import {
   hasUsableListingContent,
   isUnavailablePropertyView,
@@ -17,7 +13,8 @@ interface UseUnavailableRecoveryOptions {
   inmueble: VitrinaInmueble;
   /** true si la imagen falló al cargar (equivalente a onerror del vanilla). */
   imageFailed: boolean;
-  onRecovered: (updated: VitrinaInmueble) => void;
+  /** Recuperación en curso (orquestada por useListUnavailableRecovery en el padre). */
+  recovering?: boolean;
 }
 
 interface UseUnavailableRecoveryResult {
@@ -30,14 +27,13 @@ interface UseUnavailableRecoveryResult {
 }
 
 /**
- * Detecta inmuebles sin datos útiles y, si la recuperación de listado está
- * habilitada, intenta Wasi → n8n en segundo plano mientras el resto de cards
- * ya están visibles (flujo original de “Verificando disponibilidad…”).
+ * Deriva el estado visual de cards vacías / no disponibles.
+ * La recuperación Wasi/n8n la orquesta useListUnavailableRecovery (un solo punto).
  */
 export function useUnavailableRecovery({
   inmueble,
   imageFailed,
-  onRecovered,
+  recovering = false,
 }: UseUnavailableRecoveryOptions): UseUnavailableRecoveryResult {
   const displayId = getDisplayPropertyId(inmueble);
   const locationRaw = normalizeDisplayText(inmueble.ubicacion);
@@ -52,6 +48,15 @@ export function useUnavailableRecovery({
     wasExternallyRecoveredByReferencia,
   );
   const displayLocation = locationRestricted ? '' : locationRaw;
+
+  if (inmueble._historicoDetailPending) {
+    return {
+      unavailable: false,
+      verifying: true,
+      displayId,
+      displayLocation: '',
+    };
+  }
 
   const fields = {
     location: displayLocation,
@@ -68,43 +73,15 @@ export function useUnavailableRecovery({
   const looksUnavailable =
     Boolean(displayId) && !alreadyUsable && (shellEmpty || unavailableByImageFail);
 
-  // Shell vacío (con o sin spinner): sin título/precio útil todavía.
   const unavailable = looksUnavailable && !title && !hasPrice;
-
-  // Los omitidos del middleware ya se intentaron en servidor: card definitiva, sin “Verificando…”.
   const skipRecovery = Boolean(inmueble._omittedFromApi);
 
-  const [verifying, setVerifying] = useState(
-    () => ENABLE_CLIENT_LIST_RECOVERY && unavailable && Boolean(displayId) && !skipRecovery,
-  );
-  const onRecoveredRef = useRef(onRecovered);
-  onRecoveredRef.current = onRecovered;
-  const inmuebleRef = useRef(inmueble);
-  inmuebleRef.current = inmueble;
-
-  useEffect(() => {
-    if (skipRecovery || !ENABLE_CLIENT_LIST_RECOVERY || !looksUnavailable || !displayId) {
-      setVerifying(false);
-      return;
-    }
-
-    let active = true;
-    setVerifying(true);
-
-    recoveryApi
-      .tryRecoverUnavailableProperty(inmuebleRef.current, displayId)
-      .then((updated) => {
-        // Aplicar aunque el efecto se limpie (cambio de pestaña): el listado sigue vivo.
-        if (updated) onRecoveredRef.current(updated);
-      })
-      .finally(() => {
-        if (active) setVerifying(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [looksUnavailable, displayId, skipRecovery]);
+  const verifying =
+    recovering ||
+    (unavailable &&
+      Boolean(displayId) &&
+      !skipRecovery &&
+      ENABLE_CLIENT_LIST_RECOVERY);
 
   return {
     unavailable,

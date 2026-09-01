@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { VitrinaInmueble } from '../api/types';
 import { ENABLE_CLIENT_LIST_RECOVERY } from '../api/config';
 import { recoveryApi } from '../api/recoveryApi';
@@ -13,18 +13,35 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
+export interface UseListUnavailableRecoveryResult {
+  /** IDs con recuperación Wasi/n8n en curso (para UI "Verificando…"). */
+  recoveringIds: ReadonlySet<string>;
+}
+
 /**
  * Recupera en segundo plano inmuebles “no disponibles” del listado.
- * No bloquea la pintura inicial: las cards normales se ven de inmediato;
- * las excepciones se enriquecen después (Wasi → n8n) vía onRecovered.
+ * Punto único de orquestación: las cards solo reflejan estado vía recoveringIds.
  */
 export function useListUnavailableRecovery(
   inmuebles: VitrinaInmueble[],
   onRecovered: (updated: VitrinaInmueble) => void,
-): void {
+): UseListUnavailableRecoveryResult {
   const onRecoveredRef = useRef(onRecovered);
   onRecoveredRef.current = onRecovered;
   const inFlightRef = useRef(new Set<string>());
+  const [recoveringIds, setRecoveringIds] = useState<ReadonlySet<string>>(() => new Set());
+
+  const markRecovering = (id: string, active: boolean) => {
+    setRecoveringIds((prev) => {
+      const has = prev.has(id);
+      if (active && has) return prev;
+      if (!active && !has) return prev;
+      const next = new Set(prev);
+      if (active) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!ENABLE_CLIENT_LIST_RECOVERY) return;
@@ -32,8 +49,7 @@ export function useListUnavailableRecovery(
     for (const prop of inmuebles) {
       const id = getDisplayPropertyId(prop);
       if (!id || inFlightRef.current.has(id)) continue;
-      // Omitidos del middleware: ya se intentaron en servidor → card definitiva.
-      if (prop._omittedFromApi) continue;
+      if (prop._omittedFromApi || prop._fromHistorico) continue;
 
       const fields = {
         location: normalizeDisplayText(prop.ubicacion),
@@ -44,16 +60,15 @@ export function useListUnavailableRecovery(
       if (!isUnavailablePropertyView(prop, fields)) continue;
 
       inFlightRef.current.add(id);
+      markRecovering(id, true);
       const snapshot = prop;
 
       void (async () => {
-        let recovered = false;
         try {
           for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
             const updated = await recoveryApi.tryRecoverUnavailableProperty(snapshot, id);
             if (updated) {
               onRecoveredRef.current(updated);
-              recovered = true;
               return;
             }
             if (attempt < MAX_ATTEMPTS - 1) {
@@ -63,9 +78,12 @@ export function useListUnavailableRecovery(
         } catch {
           /* se libera abajo */
         } finally {
-          if (!recovered) inFlightRef.current.delete(id);
+          inFlightRef.current.delete(id);
+          markRecovering(id, false);
         }
       })();
     }
   }, [inmuebles]);
+
+  return { recoveringIds };
 }

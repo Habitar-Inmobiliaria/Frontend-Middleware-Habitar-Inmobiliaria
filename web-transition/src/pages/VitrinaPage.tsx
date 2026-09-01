@@ -1,4 +1,4 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { lazy, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useParams } from 'react-router-dom';
 import type { VitrinaInmueble } from '../api/types';
 import { vitrinaApi } from '../api/vitrinaApi';
@@ -16,12 +16,15 @@ import {
 } from '../utils/property';
 import { getEstado, matchesTab, type TabId } from '../utils/estado';
 import {
+  buildHistoricoShell,
   getLatestHistoryByProperty,
   HISTORICO_PAGE_SIZE,
+  mapHistoricoDetailToInmueble,
+  type HistoricoRecord,
 } from '../utils/historico';
 import { mergeInmuebleLists } from '../utils/recovery';
 import { parseVitrinaAlertas } from '../utils/alertas';
-import { filterInmueblesBySearch, normalizeSearchQuery } from '../utils/search';
+import { filterInmueblesBySearch, matchesInmuebleSearch, normalizeSearchQuery } from '../utils/search';
 import PropertyCard from '../components/PropertyCard/PropertyCard';
 import type { CardAccion } from '../components/ActionBar/ActionBar';
 import AsesorCard from '../components/AsesorCard/AsesorCard';
@@ -32,7 +35,7 @@ import Toast from '../components/Toast/Toast';
 import FeedbackModal from '../components/modals/FeedbackModal';
 import LoadingModal from '../components/modals/LoadingModal';
 import SuccessModal from '../components/modals/SuccessModal';
-import DetailModal from '../components/DetailModal/DetailModal';
+const DetailModal = lazy(() => import('../components/DetailModal/DetailModal'));
 import ImportantInfoSidebar from '../components/ImportantInfoSidebar/ImportantInfoSidebar';
 import TutorialModal from '../components/TutorialModal/TutorialModal';
 import WhatsAppFloat from '../components/WhatsAppFloat/WhatsAppFloat';
@@ -103,6 +106,10 @@ export default function VitrinaPage() {
 
   const [inmuebles, setInmuebles] = useState<VitrinaInmueble[]>([]);
   const [processing, setProcessing] = useState<Set<string>>(new Set());
+  const tokenRef = useRef(token);
+  tokenRef.current = token;
+  const processingRef = useRef(processing);
+  processingRef.current = processing;
 
   const [feedbackTarget, setFeedbackTarget] = useState<VitrinaInmueble | null>(null);
   const [loadingModal, setLoadingModal] = useState(false);
@@ -122,10 +129,12 @@ export default function VitrinaPage() {
   const [slowLoad, setSlowLoad] = useState(false);
   const skeletonStartedAt = useRef(performance.now());
 
-  // Histórico: carga diferida la primera vez que se abre la pestaña.
-  const [historicoData, setHistoricoData] = useState<VitrinaInmueble[]>([]);
-  const [historicoFetched, setHistoricoFetched] = useState(false);
+  // Histórico: metadatos al abrir la pestaña; detalles solo de la página visible.
+  const [historicoRecords, setHistoricoRecords] = useState<HistoricoRecord[]>([]);
+  const [historicoListFetched, setHistoricoListFetched] = useState(false);
   const [historicoLoading, setHistoricoLoading] = useState(false);
+  const [historicoPageLoading, setHistoricoPageLoading] = useState(false);
+  const [historicoDetailsById, setHistoricoDetailsById] = useState<Record<string, VitrinaInmueble>>({});
   const [historicoPage, setHistoricoPage] = useState(1);
 
   // Comentarios del asesor: se cargan con el token y se muestran en cada pestaña de listado.
@@ -175,19 +184,19 @@ export default function VitrinaPage() {
       });
       return changed ? next : prev;
     });
-    setHistoricoData((prev) => {
+    setHistoricoDetailsById((prev) => {
       let changed = false;
-      const next = prev.map((i) => {
-        if (!matchesRecovered(i, updated)) return i;
+      const next = { ...prev };
+      for (const [key, item] of Object.entries(prev)) {
+        if (!matchesRecovered(item, updated)) continue;
+        next[key] = { ...item, ...updated };
         changed = true;
-        return { ...i, ...updated };
-      });
+      }
       return changed ? next : prev;
     });
   }, []);
 
-  // Recuperación en segundo plano de excepciones vacías (Verificando…).
-  useListUnavailableRecovery(inmuebles, handleRecovered);
+  const { recoveringIds } = useListUnavailableRecovery(inmuebles, handleRecovered);
 
   // Aviso de paciencia si el GET vitrina tarda (scrapes en backend).
   useEffect(() => {
@@ -275,11 +284,7 @@ export default function VitrinaPage() {
   }, [loading, error, data, token]);
 
   useEffect(() => {
-    // IMPORTANTE:
-    // Este efecto no depende de `historicoLoading` para evitar auto-cancelarse
-    // cuando el propio efecto hace setHistoricoLoading(true). Ese ciclo causaba
-    // el spinner infinito en escenarios de error 500.
-    if (activeTab !== 'historico' || historicoFetched || !token) return;
+    if (activeTab !== 'historico' || historicoListFetched || !token) return;
 
     let cancelled = false;
     setHistoricoLoading(true);
@@ -287,65 +292,19 @@ export default function VitrinaPage() {
     (async () => {
       try {
         const histData = await vitrinaApi.getHistorico(token);
-        const latestRecords = getLatestHistoryByProperty(histData);
-
-        const details = await Promise.all(
-          latestRecords.map(async (item) => {
-            try {
-              const propertyId = item._propertyId;
-              if (!propertyId) return null;
-
-              const pDetail = await vitrinaApi.getPropertyDetail(token, propertyId);
-              if (!pDetail) return null;
-
-              const mapped: VitrinaInmueble = {
-                id: propertyId,
-                titulo: pDetail.titulo || '',
-                imagenUrl:
-                  pDetail.galeriasImagenes && pDetail.galeriasImagenes.length > 0
-                    ? pDetail.galeriasImagenes[0]
-                    : '',
-                descripcionCorta:
-                  pDetail.descripcion || pDetail.observaciones || pDetail.descripcionCorta || '',
-                precioFormateado:
-                  pDetail.precioFormateado ||
-                  (pDetail.precio
-                    ? `$${Number(pDetail.precio).toLocaleString('es-CO')}`
-                    : ''),
-                ubicacion: pDetail.ubicacion,
-                urlReferencia: pDetail.urlReferencia || pDetail.url || '',
-                url: pDetail.url || pDetail.urlReferencia || '',
-                codigoNumerico: item.codigoNumerico,
-                _historyMeta: item,
-                _fromHistorico: true,
-                _locationRestricted: true,
-                _externalDataSource: true,
-              };
-              return mapped;
-            } catch (err) {
-              console.warn(
-                'No se pudo cargar el detalle del histórico',
-                item._propertyId || item.codigoNumerico,
-                err,
-              );
-              return null;
-            }
-          }),
-        );
-
         if (cancelled) return;
-        setHistoricoData(details.filter((d): d is VitrinaInmueble => Boolean(d)));
+        setHistoricoRecords(getLatestHistoryByProperty(histData));
         setHistoricoPage(1);
       } catch (e) {
         console.error('Error cargando histórico', e);
         if (!cancelled) {
-          setHistoricoData([]);
+          setHistoricoRecords([]);
           setHistoricoPage(1);
           showToast(ERROR_GENERICO);
         }
       } finally {
         if (!cancelled) {
-          setHistoricoFetched(true);
+          setHistoricoListFetched(true);
           setHistoricoLoading(false);
         }
       }
@@ -354,11 +313,89 @@ export default function VitrinaPage() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, historicoFetched, token, showToast]);
+  }, [activeTab, historicoListFetched, token, showToast]);
 
-  function setEstadoLocal(inmueble: VitrinaInmueble, nuevoEstado: string) {
-    setInmuebles((prev) => prev.map((i) => (i === inmueble ? { ...i, estado: nuevoEstado } : i)));
-  }
+  const historicoList = useMemo(
+    () =>
+      historicoRecords.map((record) =>
+        buildHistoricoShell(record, historicoDetailsById[record._propertyId]),
+      ),
+    [historicoRecords, historicoDetailsById],
+  );
+
+  const historicoSearchFiltered = useMemo(() => {
+    const query = normalizeSearchQuery(deferredSearch);
+    if (!query) return historicoList;
+    return historicoList.filter((item) => matchesInmuebleSearch(item, query));
+  }, [historicoList, deferredSearch]);
+
+  const historicoTotalPages = Math.max(
+    1,
+    Math.ceil(historicoSearchFiltered.length / HISTORICO_PAGE_SIZE),
+  );
+
+  // Detalles del histórico: solo la página visible (máx. HISTORICO_PAGE_SIZE peticiones).
+  useEffect(() => {
+    if (activeTab !== 'historico' || !historicoListFetched || !token) return;
+
+    const page = Math.min(Math.max(historicoPage, 1), historicoTotalPages);
+    const start = (page - 1) * HISTORICO_PAGE_SIZE;
+    const pageItems = historicoSearchFiltered.slice(start, start + HISTORICO_PAGE_SIZE);
+    const missingRecords = pageItems
+      .filter((item) => item._historicoDetailPending && item._historyMeta)
+      .map((item) => item._historyMeta as HistoricoRecord);
+
+    if (missingRecords.length === 0) return;
+
+    let cancelled = false;
+    setHistoricoPageLoading(true);
+
+    (async () => {
+      try {
+        const details = await Promise.all(
+          missingRecords.map(async (record) => {
+            try {
+              const propertyId = record._propertyId;
+              if (!propertyId) return null;
+              const pDetail = await vitrinaApi.getPropertyDetail(token, propertyId);
+              if (!pDetail) return null;
+              return mapHistoricoDetailToInmueble(record, pDetail);
+            } catch (err) {
+              console.warn(
+                'No se pudo cargar el detalle del histórico',
+                record._propertyId || record.codigoNumerico,
+                err,
+              );
+              return null;
+            }
+          }),
+        );
+
+        if (cancelled) return;
+
+        setHistoricoDetailsById((prev) => {
+          const next = { ...prev };
+          for (const mapped of details) {
+            if (mapped) next[mapped.id] = mapped;
+          }
+          return next;
+        });
+      } finally {
+        if (!cancelled) setHistoricoPageLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeTab,
+    historicoListFetched,
+    historicoPage,
+    historicoSearchFiltered,
+    historicoTotalPages,
+    token,
+  ]);
 
   function markProcessing(stableId: string, active: boolean) {
     if (!stableId) return;
@@ -370,58 +407,68 @@ export default function VitrinaPage() {
     });
   }
 
-  function handleAction(inmueble: VitrinaInmueble, accion: CardAccion) {
-    const url = getActionUrl(inmueble);
-    if (!url) {
-      showToast('⚠ Este inmueble no permite esta acción.');
-      return;
-    }
-    if (accion === 'aprobar') {
-      void aprobarInmueble(inmueble, url);
-    } else {
-      setFeedbackTarget(inmueble);
-    }
-  }
+  const setEstadoLocal = useCallback((inmueble: VitrinaInmueble, nuevoEstado: string) => {
+    setInmuebles((prev) => prev.map((i) => (i === inmueble ? { ...i, estado: nuevoEstado } : i)));
+  }, []);
 
-  async function aprobarInmueble(inmueble: VitrinaInmueble, url: string) {
-    const stableId = getStableId(inmueble);
-    if (stableId && processing.has(stableId)) return;
-    markProcessing(stableId, true);
-    try {
-      await vitrinaApi.aprobar(token, url);
-      setEstadoLocal(inmueble, 'APROBADO');
-    } catch (err) {
-      console.error('Aprobar falló:', err);
-      showToast(ERROR_GENERICO);
-    } finally {
-      markProcessing(stableId, false);
-    }
-  }
+  const handleAction = useCallback(
+    (inmueble: VitrinaInmueble, accion: CardAccion) => {
+      const url = getActionUrl(inmueble);
+      if (!url) {
+        showToast('⚠ Este inmueble no permite esta acción.');
+        return;
+      }
+      if (accion === 'aprobar') {
+        const stableId = getStableId(inmueble);
+        if (stableId && processingRef.current.has(stableId)) return;
+        markProcessing(stableId, true);
+        void vitrinaApi
+          .aprobar(tokenRef.current, url)
+          .then(() => setEstadoLocal(inmueble, 'APROBADO'))
+          .catch((err) => {
+            console.error('Aprobar falló:', err);
+            showToast(ERROR_GENERICO);
+          })
+          .finally(() => markProcessing(stableId, false));
+      } else {
+        setFeedbackTarget(inmueble);
+      }
+    },
+    [showToast, setEstadoLocal],
+  );
 
-  async function handleDetailAction(
-    inmueble: VitrinaInmueble,
-    accion: CardAccion,
-  ): Promise<boolean> {
-    const url = getActionUrl(inmueble);
-    if (!url) {
-      showToast('⚠ Este inmueble no permite esta acción.');
-      return false;
-    }
-    try {
-      if (accion === 'aprobar') await vitrinaApi.aprobar(token, url);
-      else await vitrinaApi.descartar(token, url);
-      setEstadoLocal(inmueble, accion === 'aprobar' ? 'APROBADO' : 'DESCARTADO');
-      return true;
-    } catch (err) {
-      console.error('Acción del detalle falló:', err);
-      showToast(ERROR_GENERICO);
-      return false;
-    }
-  }
+  const handleDetailAction = useCallback(
+    async (inmueble: VitrinaInmueble, accion: CardAccion): Promise<boolean> => {
+      const url = getActionUrl(inmueble);
+      if (!url) {
+        showToast('⚠ Este inmueble no permite esta acción.');
+        return false;
+      }
+      try {
+        if (accion === 'aprobar') await vitrinaApi.aprobar(tokenRef.current, url);
+        else await vitrinaApi.descartar(tokenRef.current, url);
+        setEstadoLocal(inmueble, accion === 'aprobar' ? 'APROBADO' : 'DESCARTADO');
+        return true;
+      } catch (err) {
+        console.error('Acción del detalle falló:', err);
+        showToast(ERROR_GENERICO);
+        return false;
+      }
+    },
+    [showToast, setEstadoLocal],
+  );
 
-  function handleFeedbackCancel() {
+  const handleFeedbackCancel = useCallback(() => {
     setFeedbackTarget(null);
-  }
+  }, []);
+
+  const handleOpenDetail = useCallback((inmueble: VitrinaInmueble) => {
+    setDetailTarget(inmueble);
+  }, []);
+
+  const handleCloseDetail = useCallback(() => {
+    setDetailTarget(null);
+  }, []);
 
   async function handleFeedbackSubmit(comment: string) {
     const inmueble = feedbackTarget;
@@ -481,22 +528,14 @@ export default function VitrinaPage() {
   }, [inmuebles]);
 
   const tabFiltered = useMemo(() => {
-    if (activeTab === 'historico') return historicoData;
+    if (activeTab === 'historico') return historicoList;
     return inmuebles.filter((i) => matchesTab(i, activeTab)).reverse();
-  }, [activeTab, inmuebles, historicoData]);
+  }, [activeTab, inmuebles, historicoList]);
 
-  const searchFiltered = useMemo(
-    () => filterInmueblesBySearch(tabFiltered, deferredSearch),
-    [tabFiltered, deferredSearch],
-  );
-
-  const historicoTotalPages = Math.max(
-    1,
-    Math.ceil(
-      (activeTab === 'historico' ? searchFiltered.length : historicoData.length) /
-        HISTORICO_PAGE_SIZE,
-    ),
-  );
+  const searchFiltered = useMemo(() => {
+    if (activeTab === 'historico') return historicoSearchFiltered;
+    return filterInmueblesBySearch(tabFiltered, deferredSearch);
+  }, [activeTab, tabFiltered, historicoSearchFiltered, deferredSearch]);
 
   // Al cambiar la búsqueda, volver a la primera página del histórico.
   useEffect(() => {
@@ -511,6 +550,11 @@ export default function VitrinaPage() {
     }
     return searchFiltered;
   }, [activeTab, searchFiltered, historicoPage, historicoTotalPages]);
+
+  const alertas = useMemo(
+    () => parseVitrinaAlertas(data?.alertas).otherAlerts,
+    [data?.alertas],
+  );
 
   // Mientras llega la API (o animación de salida del skeleton).
   if (loading || bootView === 'skeleton' || bootView === 'exiting') {
@@ -537,8 +581,6 @@ export default function VitrinaPage() {
   }
 
   const asesor = data?.asesor;
-  // Las alertas "omitido" se muestran como cards; el banner solo para otros avisos.
-  const alertas = parseVitrinaAlertas(data?.alertas).otherAlerts;
   const emptyCopy = searchActive
     ? {
         title: 'Sin resultados',
@@ -548,6 +590,7 @@ export default function VitrinaPage() {
   const showHistoricoPagination =
     activeTab === 'historico' &&
     !historicoLoading &&
+    !historicoPageLoading &&
     searchFiltered.length > HISTORICO_PAGE_SIZE;
 
   // Orden: título → tabs → sidebar → cards, uno tras otro con rebote.
@@ -624,6 +667,11 @@ export default function VitrinaPage() {
             <div className={styles.historicoSpinner} />
             <p>Cargando histórico…</p>
           </div>
+        ) : activeTab === 'historico' && historicoPageLoading && visibles.length === 0 ? (
+          <div className={styles.historicoLoading}>
+            <div className={styles.historicoSpinner} />
+            <p>Cargando inmuebles…</p>
+          </div>
         ) : visibles.length === 0 ? (
           <div className={`${styles.state} ${enterClass('item') ?? ''}`} style={enterStyle(4)}>
             <div className={styles.stateTitle}>{emptyCopy.title}</div>
@@ -650,9 +698,9 @@ export default function VitrinaPage() {
                   inmueble={inmueble}
                   activeTab={activeTab}
                   processing={processing.has(getStableId(inmueble))}
+                  recovering={recoveringIds.has(getStableId(inmueble))}
                   onAction={handleAction}
-                  onOpenDetail={setDetailTarget}
-                  onRecovered={handleRecovered}
+                  onOpenDetail={handleOpenDetail}
                 />
               </div>
             ))}
@@ -703,13 +751,15 @@ export default function VitrinaPage() {
       {successModal && <SuccessModal onClose={() => setSuccessModal(false)} />}
 
       {detailTarget && (
-        <DetailModal
-          token={token}
-          inmueble={detailTarget}
-          activeTab={activeTab}
-          onClose={() => setDetailTarget(null)}
-          onAction={handleDetailAction}
-        />
+        <Suspense fallback={null}>
+          <DetailModal
+            token={token}
+            inmueble={detailTarget}
+            activeTab={activeTab}
+            onClose={handleCloseDetail}
+            onAction={handleDetailAction}
+          />
+        </Suspense>
       )}
 
       {tutorialOpen && (

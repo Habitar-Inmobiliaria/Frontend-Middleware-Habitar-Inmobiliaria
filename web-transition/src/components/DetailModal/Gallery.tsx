@@ -5,6 +5,15 @@ import Lightbox from './Lightbox';
 import styles from './DetailModal.module.css';
 
 const PLACEHOLDER = 'https://via.placeholder.com/800x500?text=Sin+imagen';
+const SLIDE_MOUNT_RADIUS = 1;
+
+function shouldMountSlide(index: number, current: number, total: number): boolean {
+  if (total <= SLIDE_MOUNT_RADIUS * 2 + 1) return true;
+  for (let delta = -SLIDE_MOUNT_RADIUS; delta <= SLIDE_MOUNT_RADIUS; delta++) {
+    if (((current + delta) % total + total) % total === index) return true;
+  }
+  return false;
+}
 
 interface GalleryProps {
   images: string[];
@@ -25,14 +34,19 @@ export default function Gallery({ images, title }: GalleryProps) {
       <div className={styles.viewport}>
         <div className={styles.track} style={{ transform: `translateX(-${current * 100}%)` }}>
           {imgs.map((src, i) => (
-            <CarouselSlide
-              key={`${src}-${i}`}
-              src={src}
-              alt={`${title} - Foto ${i + 1}`}
-              eager={i === 0}
-              active={i === current}
-              onOpen={() => setLightboxIndex(i)}
-            />
+            <div key={`${src}-${i}`} className={styles.slide}>
+              {shouldMountSlide(i, current, total) ? (
+                <CarouselSlide
+                  src={src}
+                  alt={`${title} - Foto ${i + 1}`}
+                  eager={i === 0}
+                  active={i === current}
+                  onOpen={() => setLightboxIndex(i)}
+                />
+              ) : (
+                <div className={styles.slidePlaceholder} aria-hidden="true" />
+              )}
+            </div>
           ))}
         </div>
 
@@ -66,9 +80,10 @@ export default function Gallery({ images, title }: GalleryProps) {
               src={getLowQualityUrl(src)}
               alt={`Miniatura ${i + 1}`}
               className={`${styles.thumb} ${i === current ? styles.thumbActive : ''}`}
+              loading="lazy"
+              decoding="async"
               onError={(e) => {
                 const img = e.currentTarget;
-                // 1) intenta URL original; 2) placeholder final.
                 if (!img.dataset.fallbackStep) {
                   img.dataset.fallbackStep = '1';
                   img.src = src;
@@ -104,13 +119,12 @@ interface CarouselSlideProps {
 }
 
 function CarouselSlide({ src, alt, eager, active, onOpen }: CarouselSlideProps) {
-  // HQ solo en la slide visible (o la primera); el resto queda en preview.
   const { displaySrc, loading, isHq } = useProgressiveImage(src, {
     preferHq: active || eager,
   });
 
   return (
-    <div className={styles.slide}>
+    <>
       {active && loading && (
         <div className={styles.slideLoading} aria-hidden="true">
           <div className={styles.lightboxSpinner} />
@@ -136,6 +150,6 @@ function CarouselSlide({ src, alt, eager, active, onOpen }: CarouselSlideProps) 
         }}
         onClick={onOpen}
       />
-    </div>
+    </>
   );
 }

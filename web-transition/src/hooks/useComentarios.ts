@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ComentarioListing } from '../api/types';
 import { vitrinaApi } from '../api/vitrinaApi';
+import { usePageVisibilityRefresh } from './usePageVisibilityRefresh';
 
 interface UseComentariosState {
   comments: ComentarioListing[];
@@ -52,26 +53,7 @@ export function useComentarios(token: string, enabled: boolean): UseComentariosS
     };
   }, [enabled, token, reloadToken]);
 
-  // Si el asesor agregó comentarios en HubSpot, refrescar al volver a la vitrina.
-  useEffect(() => {
-    if (!enabled || !token || !loaded) return;
-
-    let lastAt = 0;
-    const softRefresh = () => {
-      if (document.visibilityState !== 'visible') return;
-      const now = Date.now();
-      if (now - lastAt < 2500) return;
-      lastAt = now;
-      refresh();
-    };
-
-    document.addEventListener('visibilitychange', softRefresh);
-    window.addEventListener('focus', softRefresh);
-    return () => {
-      document.removeEventListener('visibilitychange', softRefresh);
-      window.removeEventListener('focus', softRefresh);
-    };
-  }, [enabled, token, loaded, refresh]);
+  usePageVisibilityRefresh(refresh, enabled && Boolean(token) && loaded);
 
   return { comments, loading, loaded, refresh };
 }

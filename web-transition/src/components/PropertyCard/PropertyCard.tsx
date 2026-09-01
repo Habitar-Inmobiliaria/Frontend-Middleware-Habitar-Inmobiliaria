@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import type { VitrinaInmueble } from '../../api/types';
 import type { TabId } from '../../utils/estado';
 import { isZeroPrice, normalizeDisplayText, normalizeImageUrl } from '../../utils/text';
@@ -10,23 +10,21 @@ interface PropertyCardProps {
   inmueble: VitrinaInmueble;
   activeTab: TabId;
   processing: boolean;
+  /** Recuperación Wasi/n8n en curso (orquestada en el listado). */
+  recovering?: boolean;
   onAction: (inmueble: VitrinaInmueble, accion: CardAccion) => void;
   onOpenDetail: (inmueble: VitrinaInmueble) => void;
-  /** Actualiza el inmueble en el estado padre tras recuperación Wasi/n8n. */
-  onRecovered?: (updated: VitrinaInmueble) => void;
 }
 
 // Tarjeta de un inmueble. Presenta imagen, precio, ID, título, ubicación,
 // descripción y las acciones según la pestaña activa.
-// Si llega sin datos útiles, muestra “Verificando disponibilidad…” y
-// recupera en segundo plano sin bloquear el resto de la grilla.
-export default function PropertyCard({
+function PropertyCard({
   inmueble,
   activeTab,
   processing,
+  recovering = false,
   onAction,
   onOpenDetail,
-  onRecovered,
 }: PropertyCardProps) {
   const [imageFailed, setImageFailed] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -41,7 +39,7 @@ export default function PropertyCard({
   const { unavailable, verifying, displayId, displayLocation } = useUnavailableRecovery({
     inmueble,
     imageFailed,
-    onRecovered: onRecovered ?? (() => undefined),
+    recovering,
   });
 
   const title = normalizeDisplayText(inmueble.titulo);
@@ -136,3 +134,16 @@ export default function PropertyCard({
     </article>
   );
 }
+
+function propertyCardPropsEqual(prev: PropertyCardProps, next: PropertyCardProps): boolean {
+  return (
+    prev.activeTab === next.activeTab &&
+    prev.processing === next.processing &&
+    prev.recovering === next.recovering &&
+    prev.onAction === next.onAction &&
+    prev.onOpenDetail === next.onOpenDetail &&
+    prev.inmueble === next.inmueble
+  );
+}
+
+export default memo(PropertyCard, propertyCardPropsEqual);

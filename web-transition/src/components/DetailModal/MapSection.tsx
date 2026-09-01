@@ -1,6 +1,4 @@
-import { useEffect, useRef } from 'react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import { useEffect, useRef, useState } from 'react';
 import type { PropertyDetail } from '../../api/types';
 import styles from './DetailModal.module.css';
 
@@ -24,8 +22,7 @@ function getGeoMeta(detail: PropertyDetail): GeoMeta {
   return { publishMode, latitude, longitude, hasCoordinates: latitude !== null && longitude !== null };
 }
 
-// Sección de mapa. Decide entre un mensaje de estado o el mapa Leaflet
-// según el modo de publicación y la disponibilidad de coordenadas.
+// Sección de mapa. Leaflet se importa al entrar en viewport (IntersectionObserver).
 export default function MapSection({ detail }: { detail: PropertyDetail }) {
   const geo = getGeoMeta(detail);
   const isSupportedMode = geo.publishMode === 1 || geo.publishMode === 2 || geo.publishMode === 3;
@@ -74,47 +71,85 @@ interface PropertyMapProps {
 
 function PropertyMap({ lat, lng, publishMode }: PropertyMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const [shouldLoadMap, setShouldLoadMap] = useState(false);
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
-    const map = L.map(el, { scrollWheelZoom: false, zoomControl: true }).setView(
-      [lat, lng],
-      publishMode === 2 ? 14 : 16,
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShouldLoadMap(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '120px 0px', threshold: 0.01 },
     );
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors',
-    }).addTo(map);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
-    if (publishMode === 2) {
-      const area = L.circle([lat, lng], {
-        radius: 500,
-        color: '#2563EB',
-        fillColor: '#60A5FA',
-        fillOpacity: 0.22,
-      }).addTo(map);
-      map.fitBounds(area.getBounds(), { padding: [18, 18] });
-    } else {
-      // Marcador vectorial para evitar dependencia del PNG marker-icon.
-      L.circleMarker([lat, lng], {
-        radius: 8,
-        color: '#1D4ED8',
-        weight: 2,
-        fillColor: '#60A5FA',
-        fillOpacity: 0.95,
-      }).addTo(map);
-    }
+  useEffect(() => {
+    if (!shouldLoadMap) return;
 
-    const t = setTimeout(() => map.invalidateSize(), 0);
+    const el = containerRef.current;
+    if (!el) return;
+
+    let map: { remove: () => void } | null = null;
+    let invalidateTimer: number | null = null;
+    let cancelled = false;
+
+    void (async () => {
+      await import('leaflet/dist/leaflet.css');
+      const leafletModule = await import('leaflet');
+      if (cancelled || !containerRef.current) return;
+
+      const L = leafletModule.default;
+      const instance = L.map(containerRef.current, { scrollWheelZoom: false, zoomControl: true }).setView(
+        [lat, lng],
+        publishMode === 2 ? 14 : 16,
+      );
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors',
+      }).addTo(instance);
+
+      if (publishMode === 2) {
+        const area = L.circle([lat, lng], {
+          radius: 500,
+          color: '#2563EB',
+          fillColor: '#60A5FA',
+          fillOpacity: 0.22,
+        }).addTo(instance);
+        instance.fitBounds(area.getBounds(), { padding: [18, 18] });
+      } else {
+        L.circleMarker([lat, lng], {
+          radius: 8,
+          color: '#1D4ED8',
+          weight: 2,
+          fillColor: '#60A5FA',
+          fillOpacity: 0.95,
+        }).addTo(instance);
+      }
+
+      map = instance;
+      invalidateTimer = window.setTimeout(() => instance.invalidateSize(), 0);
+    })();
 
     return () => {
-      clearTimeout(t);
-      map.remove();
+      cancelled = true;
+      if (invalidateTimer != null) window.clearTimeout(invalidateTimer);
+      if (map) map.remove();
     };
-  }, [lat, lng, publishMode]);
+  }, [shouldLoadMap, lat, lng, publishMode]);
 
-  return <div ref={containerRef} className={styles.map} />;
+  return (
+    <div
+      ref={containerRef}
+      className={`${styles.map} ${!shouldLoadMap ? styles.mapPending : ''}`}
+    />
+  );
 }

@@ -117,11 +117,13 @@
   min-width: 0;
 }
 
-/* Wrapper del stagger: la tarjeta llena la celda. */
+/* Wrapper del stagger: la tarjeta llena la celda; off-screen skip paint. */
 .grid > div {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 420px;
 }
 
 .grid > div > * {

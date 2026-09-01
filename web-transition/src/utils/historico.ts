@@ -5,7 +5,7 @@
 // formatHistoryDate / normalizeHistoryState en vitrina.js.
 // ============================================================
 
-import type { HistoricoInmueble } from '../api/types';
+import type { HistoricoInmueble, PropertyDetail, VitrinaInmueble } from '../api/types';
 
 export const HISTORICO_PAGE_SIZE = 10;
 
@@ -82,5 +82,65 @@ export function getHistoryBadge(estadoCodigo: string | null | undefined): {
   return {
     text: stateCode.replace('_', ' '),
     classKey: stateCode.toLowerCase(),
+  };
+}
+
+/** Mapea detalle API → inmueble de grilla para la pestaña Histórico. */
+export function mapHistoricoDetailToInmueble(
+  record: HistoricoRecord,
+  pDetail: PropertyDetail,
+): VitrinaInmueble {
+  const propertyId = record._propertyId;
+  return {
+    id: propertyId,
+    titulo: pDetail.titulo || '',
+    imagenUrl:
+      pDetail.galeriasImagenes && pDetail.galeriasImagenes.length > 0
+        ? pDetail.galeriasImagenes[0]
+        : '',
+    descripcionCorta:
+      pDetail.descripcion || pDetail.observaciones || pDetail.descripcionCorta || '',
+    precioFormateado:
+      pDetail.precioFormateado ||
+      (pDetail.precio ? `$${Number(pDetail.precio).toLocaleString('es-CO')}` : ''),
+    ubicacion: pDetail.ubicacion,
+    urlReferencia: pDetail.urlReferencia || pDetail.url || '',
+    url: pDetail.url || pDetail.urlReferencia || '',
+    codigoNumerico: record.codigoNumerico,
+    _historyMeta: record,
+    _fromHistorico: true,
+    _locationRestricted: true,
+    _externalDataSource: true,
+  };
+}
+
+/** Shell de histórico antes de cargar el detalle de la página visible. */
+export function buildHistoricoShell(
+  record: HistoricoRecord,
+  cached?: VitrinaInmueble | null,
+): VitrinaInmueble {
+  if (cached) {
+    return {
+      ...cached,
+      _historyMeta: record,
+      _fromHistorico: true,
+      _historicoDetailPending: false,
+    };
+  }
+  return {
+    id: record._propertyId,
+    codigoNumerico: record.codigoNumerico,
+    titulo: '',
+    imagenUrl: '',
+    descripcionCorta: '',
+    precioFormateado: '',
+    ubicacion: '',
+    urlReferencia: '',
+    url: '',
+    _historyMeta: record,
+    _fromHistorico: true,
+    _locationRestricted: true,
+    _externalDataSource: true,
+    _historicoDetailPending: true,
   };
 }
