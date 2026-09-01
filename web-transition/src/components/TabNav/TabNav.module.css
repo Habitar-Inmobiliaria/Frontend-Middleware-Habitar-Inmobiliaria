@@ -71,7 +71,7 @@
   height: 20px;
   padding: 0 6px;
   border-radius: 10px;
-  background: var(--border-color);
+  background: #e5e7eb;
   color: var(--text-secondary);
   font-size: 0.72rem;
   font-weight: 700;

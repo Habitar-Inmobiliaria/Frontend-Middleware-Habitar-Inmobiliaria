@@ -13,3 +13,8 @@ web-transition/.env.local
 # IDE
 .idea/
 .vscode/
+
+# Playwright / Vitest (web-transition)
+web-transition/test-results/
+web-transition/playwright-report/
+web-transition/coverage/

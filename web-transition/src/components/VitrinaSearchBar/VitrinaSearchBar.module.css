@@ -31,7 +31,7 @@
 }
 
 .field:focus-within {
-  border-color: #9ca3af;
+  border-color: #6b7280;
   box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.06);
 }
 
@@ -60,7 +60,7 @@
 }
 
 .input::placeholder {
-  color: #9ca3af;
+  color: var(--text-secondary);
   font-weight: 500;
 }
 

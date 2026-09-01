@@ -10,7 +10,8 @@
   --bg-card: #ffffff;
 
   --text-primary: #111827;
-  --text-secondary: #6b7280;
+  /* ≥4.5:1 sobre --bg-app y --bg-card (WCAG AA). #6b7280 ≈ 4.39:1 — insuficiente. */
+  --text-secondary: #4b5563;
 
   --primary-color: #000000;
   --primary-hover: #374151;
