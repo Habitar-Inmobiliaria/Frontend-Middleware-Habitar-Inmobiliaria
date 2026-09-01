@@ -551,6 +551,13 @@ export default function VitrinaPage() {
     return searchFiltered;
   }, [activeTab, searchFiltered, historicoPage, historicoTotalPages]);
 
+  /** Remonta la grilla al filtrar/paginar: evita artefactos de content-visibility. */
+  const gridRenderKey = useMemo(() => {
+    const q = normalizeSearchQuery(deferredSearch);
+    if (activeTab === 'historico') return `${activeTab}:${q}:${historicoPage}`;
+    return `${activeTab}:${q}`;
+  }, [activeTab, deferredSearch, historicoPage]);
+
   const alertas = useMemo(
     () => parseVitrinaAlertas(data?.alertas).otherAlerts,
     [data?.alertas],
@@ -687,7 +694,10 @@ export default function VitrinaPage() {
             ) : null}
           </div>
         ) : (
-          <section className={styles.grid}>
+          <section
+            key={gridRenderKey}
+            className={`${styles.grid} ${searchActive ? styles.gridFiltered : ''}`}
+          >
             {visibles.map((inmueble, index) => (
               <div
                 key={getInmuebleKey(inmueble, index)}

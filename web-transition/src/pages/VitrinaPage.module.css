@@ -135,6 +135,12 @@
   grid-template-columns: repeat(2, 1fr);
 }
 
+/* Con búsqueda activa: forzar pintura (content-visibility deja celdas viejas visibles). */
+.gridFiltered > div {
+  content-visibility: visible;
+  contain-intrinsic-size: auto;
+}
+
 .state {
   padding: 48px 24px;
   text-align: center;
