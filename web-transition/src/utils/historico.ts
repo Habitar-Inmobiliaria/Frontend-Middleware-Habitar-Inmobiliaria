@@ -6,6 +6,7 @@
 // ============================================================
 
 import type { HistoricoInmueble, PropertyDetail, VitrinaInmueble } from '../api/types';
+import { normalizeTipoNegocio } from './tipoNegocio';
 
 export const HISTORICO_PAGE_SIZE = 10;
 
@@ -107,6 +108,7 @@ export function mapHistoricoDetailToInmueble(
     urlReferencia: pDetail.urlReferencia || pDetail.url || '',
     url: pDetail.url || pDetail.urlReferencia || '',
     codigoNumerico: record.codigoNumerico,
+    tipoNegocio: normalizeTipoNegocio(pDetail.tipoNegocio),
     _historyMeta: record,
     _fromHistorico: true,
     _locationRestricted: true,

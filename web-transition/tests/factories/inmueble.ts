@@ -12,6 +12,7 @@ export function buildInmueble(overrides: Partial<VitrinaInmueble> = {}): Vitrina
     descripcionCorta: 'Hermosa casa con jardín',
     urlReferencia: 'https://habitarinmobiliaria.co/inmueble/casa-venta/8116766',
     url: 'https://habitarinmobiliaria.co/inmueble/casa-venta/8116766',
+    tipoNegocio: 'VENTA',
     ...overrides,
   };
 }

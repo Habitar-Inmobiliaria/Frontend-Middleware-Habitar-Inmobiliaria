@@ -24,6 +24,7 @@
 5. **Factories** para `VitrinaInmueble`, `HistoricoInmueble` y `PropertyDetail`; no duplicar payloads en specs.
 6. **Lógica pura primero:** priorizar tests en `src/utils/` antes de E2E costosos.
 7. **No mutar prod en tests:** no ejecutar `aprobar`/`descartar` contra la vitrina de prueba en CI automático.
+8. **Filtro tipoNegocio:** usar `matchesTipoNegocio` / `filterInmueblesByTipoNegocio` (campo del listado). No inferir con regex.
 
 ## Comandos
 

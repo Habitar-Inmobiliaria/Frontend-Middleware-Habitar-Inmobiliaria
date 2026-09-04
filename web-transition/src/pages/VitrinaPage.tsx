@@ -24,13 +24,18 @@ import {
 } from '../utils/historico';
 import { mergeInmuebleLists } from '../utils/recovery';
 import { parseVitrinaAlertas } from '../utils/alertas';
-import { filterInmueblesBySearch, matchesInmuebleSearch, normalizeSearchQuery } from '../utils/search';
+import { filterInmueblesBySearch, normalizeSearchQuery } from '../utils/search';
+import {
+  filterInmueblesByTipoNegocio,
+  type TipoNegocioFiltro,
+} from '../utils/tipoNegocio';
 import PropertyCard from '../components/PropertyCard/PropertyCard';
 import type { CardAccion } from '../components/ActionBar/ActionBar';
 import AsesorCard from '../components/AsesorCard/AsesorCard';
 import BuscadorCTA from '../components/BuscadorCTA/BuscadorCTA';
 import TabNav from '../components/TabNav/TabNav';
 import VitrinaSearchBar from '../components/VitrinaSearchBar/VitrinaSearchBar';
+import TipoNegocioFilter from '../components/TipoNegocioFilter/TipoNegocioFilter';
 import Toast from '../components/Toast/Toast';
 import FeedbackModal from '../components/modals/FeedbackModal';
 import LoadingModal from '../components/modals/LoadingModal';
@@ -103,6 +108,11 @@ export default function VitrinaPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const deferredSearch = useDeferredValue(searchQuery);
   const searchActive = Boolean(normalizeSearchQuery(deferredSearch));
+  const [tipoNegocioFiltros, setTipoNegocioFiltros] = useState<Set<TipoNegocioFiltro>>(
+    () => new Set(),
+  );
+  const tipoNegocioActive = tipoNegocioFiltros.size > 0;
+  const listFilterActive = searchActive || tipoNegocioActive;
 
   const [inmuebles, setInmuebles] = useState<VitrinaInmueble[]>([]);
   const [processing, setProcessing] = useState<Set<string>>(new Set());
@@ -324,10 +334,9 @@ export default function VitrinaPage() {
   );
 
   const historicoSearchFiltered = useMemo(() => {
-    const query = normalizeSearchQuery(deferredSearch);
-    if (!query) return historicoList;
-    return historicoList.filter((item) => matchesInmuebleSearch(item, query));
-  }, [historicoList, deferredSearch]);
+    const byTipo = filterInmueblesByTipoNegocio(historicoList, tipoNegocioFiltros);
+    return filterInmueblesBySearch(byTipo, deferredSearch);
+  }, [historicoList, deferredSearch, tipoNegocioFiltros]);
 
   const historicoTotalPages = Math.max(
     1,
@@ -534,8 +543,9 @@ export default function VitrinaPage() {
 
   const searchFiltered = useMemo(() => {
     if (activeTab === 'historico') return historicoSearchFiltered;
-    return filterInmueblesBySearch(tabFiltered, deferredSearch);
-  }, [activeTab, tabFiltered, historicoSearchFiltered, deferredSearch]);
+    const byTipo = filterInmueblesByTipoNegocio(tabFiltered, tipoNegocioFiltros);
+    return filterInmueblesBySearch(byTipo, deferredSearch);
+  }, [activeTab, tabFiltered, historicoSearchFiltered, deferredSearch, tipoNegocioFiltros]);
 
   // Al cambiar la búsqueda, volver a la primera página del histórico.
   useEffect(() => {
@@ -554,9 +564,10 @@ export default function VitrinaPage() {
   /** Remonta la grilla al filtrar/paginar: evita artefactos de content-visibility. */
   const gridRenderKey = useMemo(() => {
     const q = normalizeSearchQuery(deferredSearch);
-    if (activeTab === 'historico') return `${activeTab}:${q}:${historicoPage}`;
-    return `${activeTab}:${q}`;
-  }, [activeTab, deferredSearch, historicoPage]);
+    const tipoKey = [...tipoNegocioFiltros].sort().join('+') || 'all';
+    if (activeTab === 'historico') return `${activeTab}:${q}:${tipoKey}:${historicoPage}`;
+    return `${activeTab}:${q}:${tipoKey}`;
+  }, [activeTab, deferredSearch, historicoPage, tipoNegocioFiltros]);
 
   const alertas = useMemo(
     () => parseVitrinaAlertas(data?.alertas).otherAlerts,
@@ -588,10 +599,12 @@ export default function VitrinaPage() {
   }
 
   const asesor = data?.asesor;
-  const emptyCopy = searchActive
+  const emptyCopy = listFilterActive
     ? {
         title: 'Sin resultados',
-        desc: `No hay inmuebles que coincidan con “${normalizeSearchQuery(deferredSearch)}”.`,
+        desc: searchActive
+          ? `No hay inmuebles que coincidan con “${normalizeSearchQuery(deferredSearch)}”.`
+          : 'No hay inmuebles para el tipo de negocio seleccionado.',
       }
     : EMPTY_COPY[activeTab];
   const showHistoricoPagination =
@@ -642,12 +655,15 @@ export default function VitrinaPage() {
             className={`${styles.searchSlot} ${enterClass('item') ?? ''}`}
             style={enterStyle(2)}
           >
-            <VitrinaSearchBar
-              value={searchQuery}
-              onChange={setSearchQuery}
-              active={searchActive}
-              resultCount={searchFiltered.length}
-            />
+            <div className={styles.searchBarGrow}>
+              <VitrinaSearchBar
+                value={searchQuery}
+                onChange={setSearchQuery}
+                active={listFilterActive}
+                resultCount={searchFiltered.length}
+              />
+            </div>
+            <TipoNegocioFilter active={tipoNegocioFiltros} onChange={setTipoNegocioFiltros} />
           </div>
         </div>
         <aside className={`${styles.sidebar} ${enterClass('item') ?? ''}`} style={enterStyle(3)}>
@@ -683,20 +699,23 @@ export default function VitrinaPage() {
           <div className={`${styles.state} ${enterClass('item') ?? ''}`} style={enterStyle(4)}>
             <div className={styles.stateTitle}>{emptyCopy.title}</div>
             <p>{emptyCopy.desc}</p>
-            {searchActive ? (
+            {listFilterActive ? (
               <button
                 type="button"
                 className={styles.clearSearchBtn}
-                onClick={() => setSearchQuery('')}
+                onClick={() => {
+                  setSearchQuery('');
+                  setTipoNegocioFiltros(new Set());
+                }}
               >
-                Limpiar búsqueda
+                Limpiar filtros
               </button>
             ) : null}
           </div>
         ) : (
           <section
             key={gridRenderKey}
-            className={`${styles.grid} ${searchActive ? styles.gridFiltered : ''}`}
+            className={`${styles.grid} ${listFilterActive ? styles.gridFiltered : ''}`}
           >
             {visibles.map((inmueble, index) => (
               <div

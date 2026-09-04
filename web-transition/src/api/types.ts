@@ -33,6 +33,13 @@ export interface Asesor {
   linkMeeting?: string | null;
 }
 
+/** Tipo de negocio del listado (GET /vitrina/{token}). */
+export type TipoNegocio =
+  | 'VENTA'
+  | 'ALQUILER'
+  | 'VENTA_Y_ALQUILER'
+  | 'DESCONOCIDO';
+
 /** Inmueble tal como llega en el listado de la vitrina. */
 export interface VitrinaInmueble {
   id: string;
@@ -52,6 +59,8 @@ export interface VitrinaInmueble {
   url?: string;
   urlInmueble?: string;
   codigoNumerico?: string;
+  /** Clasificación HubSpot/Wasi/n8n (listado). Ausente → tratar como DESCONOCIDO. */
+  tipoNegocio?: TipoNegocio;
   // Campos internos del frontend (no provienen del backend):
   _fromHistorico?: boolean;
   _externalDataSource?: boolean;

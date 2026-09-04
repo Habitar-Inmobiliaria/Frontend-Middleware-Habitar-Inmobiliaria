@@ -59,9 +59,18 @@
 .searchSlot {
   min-width: 0;
   width: 100%;
-  max-width: 420px;
+  max-width: 720px;
   padding-top: 4px;
   padding-bottom: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.searchBarGrow {
+  flex: 1 1 240px;
+  min-width: 0;
 }
 
 .clearSearchBtn {
